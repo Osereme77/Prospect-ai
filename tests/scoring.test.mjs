@@ -7,6 +7,7 @@ import { filterLeads } from '../src/lib/filters.ts'
 import { normalizeBraveResults } from '../supabase/functions/_shared/discovery.ts'
 import { buildSuggestedQuery } from '../src/lib/query.ts'
 import { createEvidenceItem, scoreEvidenceChanges, setEvidenceReview } from '../src/lib/evidence.ts'
+import { countFollowUpsDue, isFollowUpDue } from '../src/lib/followups.ts'
 
 test('score uses the documented weights and rounds to an integer', () => {
   assert.equal(calculateScore({ relevance: 100, needEvidence: 80, budgetSignals: 50, freshness: 60, sourceConfidence: 90 }), 81)
@@ -95,4 +96,14 @@ test('reviewed evidence updates the explainable score and score components', () 
   assert.ok(reviewed.score>unreviewed.score)
   assert.equal(reviewed.scoreBreakdown.needEvidence,80)
   assert.match(reviewed.scoreReason,/owner-reviewed evidence/)
+})
+
+test('follow-up metrics count only valid due dates on open leads', () => {
+  const now=new Date(2026,9,20,12)
+  assert.equal(isFollowUpDue({followUp:'2026-10-20',status:'Reviewed'},now),true)
+  assert.equal(isFollowUpDue({followUp:'2026-10-19',status:'New'},now),true)
+  assert.equal(isFollowUpDue({followUp:'2026-10-21',status:'New'},now),false)
+  assert.equal(isFollowUpDue({followUp:'2026-10-19',status:'Won'},now),false)
+  assert.equal(isFollowUpDue({followUp:'2026-02-30',status:'New'},now),false)
+  assert.equal(countFollowUpsDue([filterSample({followUp:'2026-10-19'}),filterSample({id:'future',followUp:'2026-10-25'}),filterSample({id:'closed',followUp:'2026-10-19',status:'Lost'})],now),1)
 })
