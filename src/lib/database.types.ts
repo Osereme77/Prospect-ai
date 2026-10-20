@@ -27,8 +27,8 @@ export type Database = {
   public: {
     Tables: {
       profiles: Table<
-        { id: string; display_name: string; headline: string; skills: string[]; services: string[]; markets: string[]; portfolio_links: string[]; experience_summary: string; notification_threshold: number; created_at: string; updated_at: string },
-        { id: string; display_name?: string; headline?: string; skills?: string[]; services?: string[]; markets?: string[]; portfolio_links?: string[]; experience_summary?: string; notification_threshold?: number; created_at?: string; updated_at?: string }
+        { id: string; display_name: string; headline: string; skills: string[]; services: string[]; markets: string[]; portfolio_links: string[]; experience_summary: string; notification_threshold: number; email_notifications_enabled: boolean; created_at: string; updated_at: string },
+        { id: string; display_name?: string; headline?: string; skills?: string[]; services?: string[]; markets?: string[]; portfolio_links?: string[]; experience_summary?: string; notification_threshold?: number; email_notifications_enabled?: boolean; created_at?: string; updated_at?: string }
       >
       user_roles: Table<{ user_id: string; role: 'user' | 'admin' | 'super_admin'; created_at: string }, { user_id: string; role?: 'user' | 'admin' | 'super_admin'; created_at?: string }>
       discovery_sources: Table<
@@ -68,7 +68,7 @@ export type Database = {
         { id?: string; owner_id?: string; lead_id?: string | null; kind?: string; title?: string; body?: string; read_at?: string | null; idempotency_key?: string; created_at?: string },
         [Relation<'notifications_lead_id_fkey', ['lead_id'], 'leads', ['id']>]
       >
-      outbox: Table<{ id: string; owner_id: string; notification_id: string | null; channel: 'email'; status: 'queued' | 'sending' | 'sent' | 'failed'; attempts: number; next_attempt_at: string; last_error_code: string | null; idempotency_key: string; created_at: string; sent_at: string | null }, { id?: string; owner_id: string; notification_id?: string | null; channel: 'email'; status?: 'queued' | 'sending' | 'sent' | 'failed'; attempts?: number; next_attempt_at?: string; last_error_code?: string | null; idempotency_key: string; created_at?: string; sent_at?: string | null }>
+      outbox: Table<{ id: string; owner_id: string; notification_id: string | null; channel: 'email'; status: 'queued' | 'sending' | 'sent' | 'failed'; attempts: number; next_attempt_at: string; last_error_code: string | null; idempotency_key: string; created_at: string; sent_at: string | null; locked_at: string | null }, { id?: string; owner_id: string; notification_id?: string | null; channel: 'email'; status?: 'queued' | 'sending' | 'sent' | 'failed'; attempts?: number; next_attempt_at?: string; last_error_code?: string | null; idempotency_key: string; created_at?: string; sent_at?: string | null; locked_at?: string | null }>
       audit_logs: Table<{ id: string; actor_id: string | null; action: string; entity_type: string; entity_id: string | null; metadata: Json; created_at: string }, { id?: string; actor_id?: string | null; action: string; entity_type: string; entity_id?: string | null; metadata?: Json; created_at?: string }>
     }
     Views: Record<string, never>

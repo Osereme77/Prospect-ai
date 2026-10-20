@@ -16,6 +16,6 @@ The PRD calls for a responsive browser workspace, Auth, durable relational data,
 
 ## Consequences
 
-- Cloud mode requires the migration and valid Supabase URL/public anon key; it blocks editing if account data cannot be loaded.
+- Cloud mode requires the migration and valid Supabase URL/publishable key (or legacy anon key); it blocks editing if account data cannot be loaded.
 - Local browser mode is not synced, backed up, or a substitute for account security.
 - Deployment, email callbacks, database policies, and multi-account isolation remain to be verified in a real Supabase project.

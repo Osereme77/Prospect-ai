@@ -1,0 +1,8 @@
+# Supabase CLI project configuration. Keep function JWT verification enabled.
+project_id = "remy-prospect-ai"
+
+[functions.discover]
+verify_jwt = true
+
+[functions.dispatch-notification-email]
+verify_jwt = true

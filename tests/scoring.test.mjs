@@ -10,6 +10,27 @@ import { createEvidenceItem, scoreEvidenceChanges, setEvidenceReview } from '../
 import { countFollowUpsDue, isFollowUpDue } from '../src/lib/followups.ts'
 import { effectiveSourceRequestLimit } from '../supabase/functions/_shared/sourcePolicy.ts'
 import { reviewPublicPage } from '../src/lib/research.ts'
+import { notificationEmail, retryAt } from '../supabase/functions/_shared/emailOutbox.ts'
+
+test('notification email escapes untrusted lead content in HTML', () => {
+  const message = notificationEmail({ title: 'Strong fit', body: 'Read <this>' }, {
+    title: '<script>alert(1)</script>', organization: 'A & B', score: 88,
+    score_reason: 'Need is "clear" & public.', source_url: 'https://example.com/jobs?a=1&b=2',
+  })
+  assert.match(message.html, /&lt;script&gt;/)
+  assert.match(message.html, /A &amp; B/)
+  assert.match(message.html, /Need is &quot;clear&quot; &amp; public\./)
+  assert.doesNotMatch(message.html, /<script>/)
+  assert.match(message.text, /Source: https:\/\/example.com/)
+  assert.doesNotMatch(notificationEmail({ title: 'Alert\r\nBcc: attacker@example.invalid', body: 'test' }).subject, /[\r\n]/)
+})
+
+test('email retry delays are bounded and increase for successive attempts', () => {
+  const now = Date.UTC(2026, 0, 1)
+  assert.equal(Date.parse(retryAt(1, now)) - now, 60_000)
+  assert.equal(Date.parse(retryAt(2, now)) - now, 5 * 60_000)
+  assert.equal(Date.parse(retryAt(99, now)) - now, 60 * 60_000)
+})
 
 test('score uses the documented weights and rounds to an integer', () => {
   assert.equal(calculateScore({ relevance: 100, needEvidence: 80, budgetSignals: 50, freshness: 60, sourceConfidence: 90 }), 81)

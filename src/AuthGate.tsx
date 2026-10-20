@@ -53,7 +53,7 @@ export default function AuthGate() {
   }
 
   if (!supabaseConfigured) return <App />
-  if (!supabase) return <main className="auth-screen"><section className="auth-card"><div className="auth-icon"><LockKeyhole size={20}/></div><h1>Account setup needs attention</h1><p>{supabaseConfigError || 'Check VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in .env.local.'}</p></section></main>
+  if (!supabase) return <main className="auth-screen"><section className="auth-card"><div className="auth-icon"><LockKeyhole size={20}/></div><h1>Account setup needs attention</h1><p>{supabaseConfigError || 'Check VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.local.'}</p></section></main>
   if (!ready) return <div className="auth-loading"><LoaderCircle className="spin"/> Checking your secure session…</div>
   if (session?.user && mode !== 'update_password') return <App user={session.user} onSignOut={async () => { await supabase?.auth.signOut() }} />
 

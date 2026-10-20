@@ -7,3 +7,4 @@ coverage/
 *.tsbuildinfo
 .DS_Store
 *.log
+supabase/.temp/

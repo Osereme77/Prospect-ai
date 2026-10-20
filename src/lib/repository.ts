@@ -13,7 +13,7 @@ export async function loadCloudWorkspace(user: User): Promise<{ leads: Lead[]; p
   if (!supabase) throw new Error('Cloud mode is not configured.')
   const [leadResult, profileResult, notificationResult, runResult, sourceResult] = await Promise.all([
     supabase.from('leads').select('*, lead_evidence(claim,source_url,observed_at,evidence_type,verification_status,reviewed_at), lead_scores(score,relevance,need_evidence,budget_signals,freshness,source_confidence,explanation,created_at)').eq('owner_id', user.id).order('created_at', { ascending: false }),
-    supabase.from('profiles').select('display_name,headline,skills,services,markets,portfolio_links,experience_summary,notification_threshold').eq('id', user.id).maybeSingle(),
+    supabase.from('profiles').select('display_name,headline,skills,services,markets,portfolio_links,experience_summary,notification_threshold,email_notifications_enabled').eq('id', user.id).maybeSingle(),
     supabase.from('notifications').select('id,kind,title,body,lead_id,read_at,created_at').eq('owner_id', user.id).order('created_at', { ascending: false }),
     supabase.from('search_runs').select('id,query,status,result_count,created_at,finished_at,error_summary').eq('owner_id',user.id).order('created_at',{ascending:false}).limit(10),
     supabase.from('discovery_sources').select('id,name,kind,base_url,enabled,config').eq('owner_id',user.id).order('created_at',{ascending:true}),
@@ -44,7 +44,7 @@ export async function loadCloudWorkspace(user: User): Promise<{ leads: Lead[]; p
   const notifications:AppNotification[]=(notificationResult.data??[]).map(row=>({id:row.id,kind:row.kind,title:row.title,body:row.body,leadId:row.lead_id??undefined,readAt:row.read_at??undefined,createdAt:row.created_at}))
   const runs:SearchRun[]=(runResult.data??[]).map(row=>({id:row.id,query:row.query,status:row.status,resultCount:row.result_count,createdAt:row.created_at,finishedAt:row.finished_at??undefined,error:row.error_summary??undefined}))
   const sources:DiscoverySource[]=(sourceResult.data??[]).map(row=>{const config=typeof row.config==='object'&&row.config!==null?row.config as Record<string,unknown>:{};return{id:row.id,name:row.name,kind:row.kind,baseUrl:row.base_url??undefined,enabled:row.enabled,monthlyLimit:Number(config.monthly_limit)||1,termsReviewedAt:typeof config.terms_reviewed_at==='string'?config.terms_reviewed_at:undefined,storageRightsConfirmedAt:typeof config.storage_rights_confirmed_at==='string'?config.storage_rights_confirmed_at:undefined}})
-  return { leads, notifications, runs, sources, profile: profile ? { name: profile.display_name || user.email?.split('@')[0] || 'User', role: profile.headline || '', skills: profile.skills ?? [], services: profile.services ?? [], markets: profile.markets ?? [], portfolioLinks:profile.portfolio_links??[], experienceSummary:profile.experience_summary??'', notificationThreshold:profile.notification_threshold??65 } : { name: user.email?.split('@')[0] || 'User', role: '', skills: [], services: [], markets: [], portfolioLinks:[], experienceSummary:'', notificationThreshold:65 } }
+  return { leads, notifications, runs, sources, profile: profile ? { name: profile.display_name || user.email?.split('@')[0] || 'User', role: profile.headline || '', skills: profile.skills ?? [], services: profile.services ?? [], markets: profile.markets ?? [], portfolioLinks:profile.portfolio_links??[], experienceSummary:profile.experience_summary??'', notificationThreshold:profile.notification_threshold??65,emailNotificationsEnabled:profile.email_notifications_enabled??false } : { name: user.email?.split('@')[0] || 'User', role: '', skills: [], services: [], markets: [], portfolioLinks:[], experienceSummary:'', notificationThreshold:65,emailNotificationsEnabled:false } }
 }
 
 export async function saveCloudDiscoverySource(user:User,source:DiscoverySource){
@@ -66,7 +66,7 @@ export async function deleteCloudDiscoverySource(user:User,id:string){
 export async function saveCloudWorkspace(user: User, leads: Lead[], profile?: ProspectProfile) {
   if (!supabase) throw new Error('Cloud mode is not configured.')
   if (profile) {
-    const { error } = await supabase.from('profiles').upsert({ id: user.id, display_name: profile.name, headline: profile.role, skills: profile.skills, services: profile.services, markets: profile.markets, portfolio_links:profile.portfolioLinks, experience_summary:profile.experienceSummary, notification_threshold:profile.notificationThreshold, updated_at: new Date().toISOString() })
+    const { error } = await supabase.from('profiles').upsert({ id: user.id, display_name: profile.name, headline: profile.role, skills: profile.skills, services: profile.services, markets: profile.markets, portfolio_links:profile.portfolioLinks, experience_summary:profile.experienceSummary, notification_threshold:profile.notificationThreshold, email_notifications_enabled:profile.emailNotificationsEnabled, updated_at: new Date().toISOString() })
     if (error) throw error
   }
   const { data: existing, error: listError } = await supabase.from('leads').select('id').eq('owner_id', user.id)

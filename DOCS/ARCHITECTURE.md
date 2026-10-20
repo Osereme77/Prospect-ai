@@ -12,10 +12,14 @@ flowchart LR
   Web -->|User JWT; bounded query| Edge[discover Edge Function]
   Edge -->|JWT verified; quota reserved| DB
   Edge -->|Server-side API key| Search[Brave Search API]
+  DB -->|Opted-in + verified only| Outbox[Email outbox]
+  Scheduler -->|Service authorization + worker secret| Worker[Email Edge Function]
+  Worker -->|Claim, send state| Outbox
+  Worker -->|Server API key| Resend[Resend]
   Web -.->|No cloud config| Local[(Browser local storage)]
 ```
 
-The browser contains only the Supabase public URL and anon/publishable key. Provider credentials and any service-role credentials stay in managed server-side secrets. The discovery function checks the user session, requires owner terms and storage-rights consent plus a separate operator storage-rights flag, validates request bounds, reserves the lower per-user/global monthly quota, filters returned URLs, and records source/run attribution. Removing the source deletes its stored result leads and linked evidence, scores, and notifications. It does not fetch result pages or submit applications.
+The browser contains only the Supabase project URL and publishable key (or a legacy anon key). Secret/service-role credentials stay in managed server-side secrets. The discovery function checks the user session, requires owner terms and storage-rights consent plus a separate operator storage-rights flag, validates request bounds, reserves the lower per-user/global monthly quota, filters returned URLs, and records source/run attribution. Removing the source deletes its stored result leads and linked evidence, scores, and notifications. It does not fetch result pages or submit applications.
 
 ## Data model
 
@@ -35,7 +39,7 @@ erDiagram
   AUTH_USERS ||--o{ AUDIT_LOGS : acts
 ```
 
-All workspace reads and writes use owner-scoped RLS. Duplicate links must point to a canonical lead belonging to the same owner. Score snapshots are append-oriented and use a scoring version. Email outbox and audit tables are groundwork only; no email sender or audit event writer is deployed.
+All workspace reads and writes use owner-scoped RLS. Duplicate links must point to a canonical lead belonging to the same owner. Score snapshots are append-oriented and use a scoring version. A qualifying notification is always saved in-app; a database trigger separately queues email only when the owner opted in and their Auth email is verified. The outbox stores no recipient address. A server-only worker looks up the confirmed address, sends through Resend with a stable idempotency key, and records bounded retry/failure states. The worker and trigger are implemented but remain inactive until the migration, provider secrets, verified sender, and scheduler are configured. Audit event writers are not deployed.
 
 ## Environments and secret handling
 
@@ -51,7 +55,8 @@ The repository has no connected cloud project, hosting environment, or secret st
 
 - Discovery is manual and Brave-only today. Owner source approval, plan storage-rights confirmation, request caps, and source-result deletion are implemented. Scheduled jobs, independent-source retries, and admin source controls are not.
 - Research uses deterministic scoring and human evidence review. Page-fetching research and AI summaries are disabled.
-- The email outbox is schema only. Provider selection, sender verification, retry worker, destination preferences, and delivery monitoring remain open.
+- Email provider choice is Resend in the worker implementation. Verify the sender domain, set `RESEND_API_KEY`, `EMAIL_FROM`, and a high-entropy `OUTBOX_WORKER_SECRET` as Edge Function secrets, deploy `dispatch-notification-email`, and configure a scheduler to call it with both the project service-role authorization and `x-worker-secret`. Keep every secret out of browser variables and Git. Confirm email delivery, retry behavior, queue age, and opt-out before enabling this channel for routine use.
+- The outbox RPCs accept service-role calls only; authenticated users can read only their own outbox rows. The worker sends only to the current confirmed Auth address and never accepts an email destination from the browser.
 - Admin roles and an `is_admin()` database helper exist, but no admin-facing controls or role-bootstrap operation are exposed to ordinary users.
 
 Do not mark these integrations operational until deployment and acceptance checks are recorded in [IMPLEMENTATION_STATUS.md](../IMPLEMENTATION_STATUS.md).
