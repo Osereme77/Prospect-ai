@@ -38,7 +38,7 @@ To use Supabase Auth/cloud mode, copy `.env.example` to `.env.local`, fill in th
    supabase db push
    ```
 
-3. Configure authentication email settings and the trusted initial admin role using a controlled server-side process; do not let users self-assign admin roles.
+3. Configure authentication email settings and provision the owner role using the trusted process in [DOCS/OWNER_BOOTSTRAP.md](DOCS/OWNER_BOOTSTRAP.md); do not let users self-assign admin roles.
 4. Copy `.env.example` to `.env.local` and set the Supabase project URL and anon/publishable key. The frontend uses Auth and RLS; no service-role secret belongs in this file.
 5. Deploy the discovery function and set `APP_ORIGIN`, `BRAVE_SEARCH_API_KEY`, `BRAVE_SEARCH_MONTHLY_LIMIT`, and `BRAVE_SEARCH_ENABLED=false` as Supabase Function secrets. The function has an atomic per-user monthly request cap. Enable it only after reviewing the current provider cost and source terms; the provider is off by default. [Brave's official pricing](https://brave.com/search/api/) currently lists paid Search API requests.
 6. Add a verified permitted source policy before discovery use. Configure email and deploy other Edge Functions only after choosing those providers and reviewing their price and terms.

@@ -4,6 +4,8 @@ import { calculateScore, scoreLead } from '../src/lib/scoring.ts'
 import { canonicalPublicUrl } from '../src/lib/urls.ts'
 import { leadsToCsv } from '../src/lib/export.ts'
 import { filterLeads } from '../src/lib/filters.ts'
+import { normalizeBraveResults } from '../supabase/functions/_shared/discovery.ts'
+import { buildSuggestedQuery } from '../src/lib/query.ts'
 
 test('score uses the documented weights and rounds to an integer', () => {
   assert.equal(calculateScore({ relevance: 100, needEvidence: 80, budgetSignals: 50, freshness: 60, sourceConfidence: 90 }), 81)
@@ -51,4 +53,24 @@ test('lead filters support recent records and unread notifications', () => {
   const notices = [{id:'n1',kind:'lead_match',title:'Match',body:'Review',createdAt:'2026-10-20T00:00:00.000Z',leadId:'lead-1'}]
   assert.deepEqual(filterLeads(leads,{withinDays:7,unreadOnly:true},notices,Date.parse('2026-10-20T12:00:00.000Z')).map(x=>x.id),['lead-1'])
   assert.deepEqual(filterLeads(leads,{unreadOnly:true},[{...notices[0],readAt:'2026-10-20T01:00:00.000Z'}]).map(x=>x.id),[])
+})
+
+test('Brave adapter normalizes bounded evidence and filters unsafe result URLs', () => {
+  const results = normalizeBraveResults({web:{results:[
+    {title:'A'.repeat(400),url:'https://example.com/job?utm_source=test',description:'B'.repeat(2000)},
+    {title:'Private',url:'http://127.0.0.1/admin',description:'internal'},
+    {title:'Credential URL',url:'https://user:pass@example.com/job',description:'private'},
+    {title:'Invalid',url:'javascript:alert(1)',description:'unsafe'},
+    {title:'Missing URL',description:'skip'},
+  ]}})
+  assert.equal(results.length,1)
+  assert.equal(results[0].title.length,300)
+  assert.equal(results[0].snippet.length,1500)
+  assert.equal(results[0].source,'Brave Search')
+  assert.equal(results[0].url,'https://example.com/job?utm_source=test')
+})
+
+test('discovery query suggestions combine unique profile skills, services, and a target market', () => {
+  assert.equal(buildSuggestedQuery(['React',' TypeScript ','react','Node.js','Python','Go'],['Web application development','AI automation','Extra service'],['Nigeria','Global']), 'React TypeScript Node.js Python Web application development AI automation Nigeria')
+  assert.equal(buildSuggestedQuery(['  ',''],[],[]), '')
 })

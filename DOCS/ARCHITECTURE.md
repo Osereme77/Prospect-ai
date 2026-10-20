@@ -45,7 +45,7 @@ All workspace reads and writes use owner-scoped RLS. Duplicate links must point 
 | Local cloud development | `.env.local`, ignored by Git | Supabase project selected by owner | Supabase Edge Function secrets only |
 | Preview/production | Host-managed public Supabase URL/key | Separate Supabase environments recommended | Managed server secrets, never `VITE_*` |
 
-The repository has no connected cloud project, hosting environment, or secret store configured. Use additive migrations through `supabase db push`; verify backup and rollback before production changes.
+The repository has no connected cloud project, hosting environment, or secret store configured. Use additive migrations through `supabase db push`; verify backup and rollback before production changes. Trusted Super Admin provisioning and recovery steps are documented in [OWNER_BOOTSTRAP.md](OWNER_BOOTSTRAP.md).
 
 ## Deferred boundaries
 

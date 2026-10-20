@@ -2,6 +2,9 @@
 // Deploy with: supabase functions deploy discover
 // Configure: supabase secrets set BRAVE_SEARCH_API_KEY=...
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { BraveSearchProvider } from '../_shared/discovery.ts'
+
+const provider = new BraveSearchProvider()
 
 const cors = {
   'Access-Control-Allow-Origin': Deno.env.get('APP_ORIGIN') ?? 'null',
@@ -49,18 +52,7 @@ Deno.serve(async request => {
   }
   await supabase.from('search_runs').update({ status: 'running', started_at: new Date().toISOString() }).eq('id', run.id).eq('owner_id', user.id)
   try {
-    const url = new URL('https://api.search.brave.com/res/v1/web/search')
-    url.searchParams.set('q', query); url.searchParams.set('country', country); url.searchParams.set('search_lang', 'en'); url.searchParams.set('count', String(count))
-    const response = await fetch(url, { headers: { 'X-Subscription-Token': apiKey, 'Accept': 'application/json' }, signal: AbortSignal.timeout(12000) })
-    if (!response.ok) throw new Error(`provider_http_${response.status}`)
-    const raw = await response.json()
-    const results = Array.isArray(raw?.web?.results) ? raw.web.results : []
-    const normalized = results.map((item: Record<string, unknown>) => ({
-      title: typeof item.title === 'string' ? item.title.slice(0, 300) : 'Untitled result',
-      url: safePublicUrl(item.url),
-      snippet: typeof item.description === 'string' ? item.description.slice(0, 1500) : '',
-      source: 'Brave Search',
-    })).filter((item: { url: string | null }) => item.url)
+    const normalized = await provider.search({ query, country, count }, apiKey)
     await supabase.from('search_runs').update({ status: 'completed', result_count: normalized.length, finished_at: new Date().toISOString() }).eq('id', run.id).eq('owner_id', user.id)
     return json({ run_id: run.id, results: normalized })
   } catch (error) {
@@ -69,16 +61,3 @@ Deno.serve(async request => {
     return json({ error: 'provider_error', run_id: run.id }, 502)
   }
 })
-
-function safePublicUrl(value: unknown): string | null {
-  if (typeof value !== 'string' || value.length > 2048) return null
-  try {
-    const url = new URL(value)
-    const host = url.hostname.toLowerCase()
-    if (!['https:', 'http:'].includes(url.protocol) || !host.includes('.') || url.username || url.password) return null
-    if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) return null
-    if (/^(0|10|127|169\.254|192\.168)\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host) || /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(host)) return null
-    if (/^(224|23[0-9]|24\d|25[0-5])\./.test(host) || host === '0.0.0.0' || host.includes(':')) return null
-    return url.toString()
-  } catch { return null }
-}
