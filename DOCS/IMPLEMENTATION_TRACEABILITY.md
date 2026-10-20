@@ -4,9 +4,9 @@ The PDF PRD remains the product authority. This matrix links its MVP requirement
 
 | PRD requirement | Current implementation | Acceptance evidence still required |
 |---|---|---|
-| Responsive, authenticated workspace | `src/App.tsx`, `src/AuthGate.tsx`, `src/styles.css` | Browser walkthrough at phone, tablet, and desktop widths; keyboard and screen-reader review. |
+| Responsive, authenticated workspace | `src/App.tsx`, `src/AuthGate.tsx`, `src/styles.css`; keyboard focus indicators and reduced-motion support | Browser walkthrough at phone, tablet, and desktop widths; keyboard and screen-reader review. |
 | Sign-up, sign-in, verification, password recovery, sign-out | `src/AuthGate.tsx`; user provisioning trigger in `supabase/migrations/202610200001_initial_schema.sql` | Deploy and test against a real Supabase project, including email callbacks and expired/revoked sessions. |
-| Private user-owned leads/profile | `src/lib/repository.ts`; profiles/leads RLS policies in the migration | Automated RLS isolation checks with two accounts and unauthenticated requests. |
+| Private user-owned leads/profile | `src/lib/repository.ts`; profiles/leads RLS policies in the migration; cloud write errors preserve last-confirmed UI data and expose retry | Automated RLS isolation checks with two accounts and unauthenticated requests. |
 | Manual opportunity and company intake | Add-prospect dialog and validation in `src/App.tsx`; local/cloud repository adapters | Test required fields, URL rejection, duplicate URL, save failure, and deletion against local and cloud modes. |
 | Evidence provenance and uncertainty labels | Evidence and source fields in lead detail; `lead_evidence` table | Verify source URL and observation timestamps survive create/update/reload; manual evidence review. |
 | Opportunity and company pipeline lifecycle | `LeadStatus`, status/location/score/source/service/budget/recency/unread filters, search, notes, follow-up editor, canonical duplicate link, filtered CSV export; `leads` table | Exercise every status transition, follow-up behavior, duplicate linking, download/round-trip export, and concurrent updates. |
