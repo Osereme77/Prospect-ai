@@ -1,0 +1,4 @@
+export type LeadStatus = 'New' | 'Reviewed' | 'Shortlisted' | 'Contacted' | 'Applied' | 'Replied' | 'Interviewing' | 'Won' | 'Lost' | 'Dismissed'
+export type LeadKind = 'Opportunity' | 'Company'
+export interface Lead { id:string; title:string; organization:string; kind:LeadKind; url:string; location:string; postedAt:string; summary:string; status:LeadStatus; score:number; scoreReason:string; source:string; tags:string[]; evidence:string[]; budget?:string; followUp?:string; notes?:string; createdAt:string }
+export interface ProspectProfile { name:string; role:string; skills:string[]; services:string[]; markets:string[] }

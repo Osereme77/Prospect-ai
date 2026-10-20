@@ -1,33 +1,61 @@
 # Remy Prospect AI
 
-Remy Prospect AI is a personal opportunity discovery and prospect research platform for an AI-assisted developer seeking paid software work.
+Remy Prospect AI is a personal, evidence-led workspace for finding and managing software work. It supports active opportunity tracking and company prospecting for a developer serving Nigeria and international markets.
 
-The product is intended to find relevant freelance projects, job listings, hiring announcements, and businesses that may need development services in Nigeria and international markets. It gathers public evidence, researches prospects, explains a 0–100 fit score, and keeps opportunities organized in a searchable pipeline.
+## Current implementation
 
-## Planned MVP
+- Responsive overview, opportunities, companies, research, notifications, and settings screens.
+- Manually add opportunities or companies with public source URLs, notes, evidence labels, tags, location, and pipeline status.
+- Search the local pipeline, edit a lead's status, inspect evidence and score rationale, and keep private notes.
+- Edit a skills and services profile; browser data persists in local storage.
+- Supabase PostgreSQL migration for profiles, roles, sources, runs, leads, evidence, explainable score history, notifications, email outbox, and audit logs with row-level security.
+- Fit-score contract uses relevance (35%), evidence of need (25%), budget signals (15%), freshness (15%), and source confidence (10%). Unknown budgets remain unknown and must not be treated as zero fit.
 
-- Discover active software opportunities and research potential client businesses, with both strategies receiving equal priority.
-- Import an opportunity manually by URL when automated discovery is unavailable or unsuitable.
-- Keep original source links and distinguish verified facts from hypotheses or unknown details.
-- Match opportunities against the owner's services, skills, and portfolio, with explainable scoring.
-- Track lead status, notes, follow-up dates, and outcomes.
-- Send persistent in-app notifications and optional email alerts. The initial notification threshold is 65/100.
-- Work as a responsive web application on phones and laptops, with a free-first operating target.
+**Sample records are illustrative synthetic examples.** Their `example.com` URLs are placeholders, not real opportunities. Replace or remove them before making decisions based on the data.
 
-## Planned technology
+Automated search, external AI research, scheduled jobs, authentication, and email delivery are not live until their server-side services and secrets are configured. The app calls this out in the UI; it does not claim to have run discovery. There is no automatic job application or unsolicited outreach.
 
-The requirements document proposes React, TypeScript, and Vite for the frontend, with Supabase Auth and PostgreSQL for authentication and data. Provider integrations for public search, AI research, email, and scheduled jobs should remain modular and optional, with useful rule-based and manual fallbacks.
+## Run locally
 
-## Product guardrails
+Requirements: Node.js 20+ and npm.
 
-- Respect source terms, privacy requirements, quotas, and access restrictions.
-- Do not bypass paywalls, authentication, CAPTCHAs, or anti-bot controls.
-- Do not invent contact details, budgets, hiring intent, or other facts; preserve evidence links and label uncertainty.
-- The MVP does not automatically apply for jobs or send unsolicited outreach. The owner controls external contact.
-- Keep provider credentials server-side and enforce authorization in server and database policies.
+```sh
+npm install
+npm run dev
+```
 
-## Project status
+The app runs in local browser-storage mode by default. Local data stays in that browser and is not synced or backed up. Do not put provider keys in `VITE_*` variables or in browser storage.
 
-This repository currently contains the product requirements document. Application implementation has not started.
+## Backend setup
 
-See [DOCS/PROSPECT PRD.pdf](DOCS/PROSPECT%20PRD.pdf) for the full requirements, data model, security expectations, acceptance criteria, and phased roadmap.
+1. Create a Supabase project and install the Supabase CLI.
+2. Link the project and apply the initial database migration:
+
+   ```sh
+   supabase link --project-ref YOUR_PROJECT_REF
+   supabase db push
+   ```
+
+3. Configure authentication email settings and the trusted initial admin role using a controlled server-side process; do not let users self-assign admin roles.
+4. Implement and deploy Edge Functions for search, import URL validation/research, scoring persistence, scheduled run coordination, and email outbox delivery. Keep provider credentials in Supabase Function secrets.
+5. Add authenticated Supabase client integration and owner-scoped synchronization before placing real user data in the backend.
+
+The current browser mode does not authenticate users or sync to Supabase. `supabase/migrations/202610200001_initial_schema.sql` is the data-security foundation, not a claim that an account has already been connected.
+
+## Product safety and data handling
+
+- Respect source terms, privacy requirements, quotas, and access restrictions. Do not bypass paywalls, logins, CAPTCHAs, or anti-bot controls.
+- Save original public URLs and distinguish observed evidence from hypotheses and missing information.
+- Never invent contact details, budgets, requirements, or hiring intent.
+- User review is required before any external contact; application submission and unsolicited outreach are not automated.
+- External requests and provider credentials belong on trusted server-side functions. Add URL allow-list/SSRF protections, rate limits, audit events, idempotency, retries, and per-user quotas before enabling automated intake.
+
+## Quality checks
+
+```sh
+npm test
+npm run build
+```
+
+See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for the phased delivery plan and [DOCS/PROSPECT PRD.pdf](DOCS/PROSPECT%20PRD.pdf) for the full product requirements.
+See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for what is implemented and which account-specific setup steps remain.
