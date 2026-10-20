@@ -63,3 +63,15 @@ npm run build
 See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for the phased delivery plan and [DOCS/PROSPECT PRD.pdf](DOCS/PROSPECT%20PRD.pdf) for the full product requirements.
 See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for what is implemented and which account-specific setup steps remain.
 See [DOCS/ARCHITECTURE.md](DOCS/ARCHITECTURE.md) for the architecture diagram, data model, environment boundaries, and deferred integrations.
+
+## Database security checks
+
+After installing the Supabase CLI and applying the migrations to the local Supabase stack, run the two-account RLS and privilege-escalation regression test:
+
+```sh
+supabase start
+supabase db reset
+supabase test db
+```
+
+The SQL test creates disposable Auth users and rolls the transaction back. It is not a substitute for verifying the deployed project and account configuration.
