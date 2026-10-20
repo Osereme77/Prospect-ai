@@ -99,6 +99,18 @@ begin
 end; $$;
 create trigger on_auth_user_created after insert on auth.users for each row execute procedure public.handle_new_user();
 
+create function public.validate_lead_duplicate() returns trigger language plpgsql security definer set search_path = '' as $$
+begin
+  if new.duplicate_of is not null then
+    if new.duplicate_of = new.id or not exists(select 1 from public.leads l where l.id=new.duplicate_of and l.owner_id=new.owner_id and l.duplicate_of is null) then
+      raise exception 'duplicate target must be a different canonical lead owned by the same user';
+    end if;
+  end if;
+  return new;
+end; $$;
+create trigger leads_validate_duplicate before insert or update of duplicate_of,owner_id on public.leads
+  for each row execute procedure public.validate_lead_duplicate();
+
 create function public.is_admin() returns boolean language sql stable security definer set search_path = '' as $$
   select exists(select 1 from public.user_roles where user_id=(select auth.uid()) and role in ('admin','super_admin'));
 $$;

@@ -2,6 +2,7 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { calculateScore, scoreLead } from '../src/lib/scoring.ts'
 import { canonicalPublicUrl } from '../src/lib/urls.ts'
+import { leadsToCsv } from '../src/lib/export.ts'
 
 test('score uses the documented weights and rounds to an integer', () => {
   assert.equal(calculateScore({ relevance: 100, needEvidence: 80, budgetSignals: 50, freshness: 60, sourceConfidence: 90 }), 81)
@@ -27,4 +28,11 @@ test('public URL validation rejects credentials, private hosts, and non-web prot
   assert.equal(canonicalPublicUrl('https://user:secret@example.com/job'), null)
   assert.equal(canonicalPublicUrl('http://192.168.1.1/admin'), null)
   assert.equal(canonicalPublicUrl('file:///etc/passwd'), null)
+})
+
+test('CSV export quotes commas, quotes, and newlines without losing fields', () => {
+  const csv = leadsToCsv([{id:'1',kind:'Opportunity',title:'Senior "React", engineer',organization:'A,B',status:'New',score:80,scoreReason:'reason\nnext',source:'manual',url:'https://example.com',location:'Remote',tags:['React','Node'],evidence:[],summary:'line 1\nline 2',createdAt:'2026-10-20T00:00:00.000Z'}])
+  assert.match(csv, /"Senior ""React"", engineer"/)
+  assert.match(csv, /"A,B"/)
+  assert.match(csv, /"reason\nnext"/)
 })
