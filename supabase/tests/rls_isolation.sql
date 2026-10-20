@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select extensions.plan(12);
+select extensions.plan(13);
 
 insert into auth.users (
   instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -46,6 +46,14 @@ select extensions.throws_ok(
 select extensions.throws_ok(
   $$select public.admin_retry_notification_outbox('d4444444-4444-4444-8444-444444444444')$$,
   '42501',null,'ordinary users cannot retry notification delivery'
+);
+select extensions.throws_ok(
+  $$select public.admin_set_discovery_source_enabled('d4444444-4444-4444-8444-444444444444',true)$$,
+  '42501',null,'ordinary users cannot change a discovery source state'
+);
+select extensions.throws_ok(
+  $$select * from public.admin_discovery_usage()$$,
+  '42501',null,'ordinary users cannot inspect aggregate discovery usage'
 );
 update public.leads set title='Changed by B' where id='c3333333-3333-4333-8333-333333333333';
 reset role;

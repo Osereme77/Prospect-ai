@@ -139,6 +139,7 @@ export interface AdminOperationsData {
   runs: { id:string; owner_id:string; query:string; status:string; result_count:number; created_at:string; error_summary:string|null }[]
   outbox: { id:string; owner_id:string; status:string; attempts:number; last_error_code:string|null; created_at:string; next_attempt_at:string; sent_at:string|null }[]
   audit: { id:string; actor_id:string|null; action:string; entity_type:string; entity_id:string|null; created_at:string }[]
+  usage: { month_start:string; total_requests:number; active_accounts:number }[]
 }
 
 export async function loadAdminOperations(_user:User):Promise<AdminOperationsData|null>{
@@ -146,19 +147,27 @@ export async function loadAdminOperations(_user:User):Promise<AdminOperationsDat
   const {data:allowed,error:roleError}=await supabase.rpc('is_admin')
   if(roleError)throw roleError
   if(!allowed)return null
-  const [sources,runs,outbox,audit]=await Promise.all([
+  const [sources,runs,outbox,audit,usage]=await Promise.all([
     supabase.from('discovery_sources').select('id,name,enabled,owner_id,kind,created_at').order('created_at',{ascending:false}).limit(50),
     supabase.from('search_runs').select('id,owner_id,query,status,result_count,created_at,error_summary').order('created_at',{ascending:false}).limit(50),
     supabase.from('outbox').select('id,owner_id,status,attempts,last_error_code,created_at,next_attempt_at,sent_at').order('created_at',{ascending:false}).limit(50),
     supabase.from('audit_logs').select('id,actor_id,action,entity_type,entity_id,created_at').order('created_at',{ascending:false}).limit(50),
+    supabase.rpc('admin_discovery_usage'),
   ])
-  for(const result of [sources,runs,outbox,audit])if(result.error)throw result.error
-  return {sources:sources.data??[],runs:runs.data??[],outbox:outbox.data??[],audit:audit.data??[]}
+  for(const result of [sources,runs,outbox,audit,usage])if(result.error)throw result.error
+  return {sources:sources.data??[],runs:runs.data??[],outbox:outbox.data??[],audit:audit.data??[],usage:usage.data??[]}
 }
 
 export async function requeueFailedNotification(id:string){
   if(!supabase)throw new Error('Cloud mode is not configured.')
   const {data,error}=await supabase.rpc('admin_retry_notification_outbox',{p_id:id})
+  if(error)throw error
+  return data
+}
+
+export async function setAdminDiscoverySourceEnabled(id:string,enabled:boolean){
+  if(!supabase)throw new Error('Cloud mode is not configured.')
+  const {data,error}=await supabase.rpc('admin_set_discovery_source_enabled',{p_id:id,p_enabled:enabled})
   if(error)throw error
   return data
 }

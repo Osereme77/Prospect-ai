@@ -20,4 +20,4 @@ Discovery must preserve public source links, avoid prohibited access, remain use
 
 - Manual entry and local pipeline tracking work without the provider.
 - Provider terms, pricing, storage rights, and source suitability must be reviewed before enabling it. See [the official Search API terms](https://api-dashboard.search.brave.com/documentation/resources/terms-of-service) and [pricing](https://brave.com/search/api/).
-- Provider quotas, scheduled runs, page research, and source registry controls remain future work.
+- Provider usage has an admin aggregate by month, and admins can pause/resume registered source rows with audited RPCs. Provider quotas still depend on server-side cap configuration; scheduled runs and independent-source retries remain future work.

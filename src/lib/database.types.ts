@@ -75,6 +75,8 @@ export type Database = {
     Functions: {
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
       admin_retry_notification_outbox: { Args: { p_id: string }; Returns: boolean }
+      admin_set_discovery_source_enabled: { Args: { p_id: string; p_enabled: boolean }; Returns: boolean }
+      admin_discovery_usage: { Args: Record<PropertyKey, never>; Returns: { month_start: string; total_requests: number; active_accounts: number }[] }
       reserve_discovery_slot: { Args: { p_owner: string; p_run_id: string; p_monthly_limit: number }; Returns: boolean }
     }
     Enums: {
