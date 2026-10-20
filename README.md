@@ -17,7 +17,7 @@ Automated search, external AI research, scheduled jobs, authentication, and emai
 
 ## Run locally
 
-Requirements: Node.js 20+ and npm.
+Requirements: Node.js 22.18+ and npm.
 
 ```sh
 npm install
@@ -25,6 +25,8 @@ npm run dev
 ```
 
 The app runs in local browser-storage mode by default. Local data stays in that browser and is not synced or backed up. Do not put provider keys in `VITE_*` variables or in browser storage.
+
+To use Supabase Auth/cloud mode, copy `.env.example` to `.env.local`, fill in the project URL and anon/publishable key, then restart Vite. Apply the database migration first; cloud mode will stop at a setup error if its schema is unavailable.
 
 ## Backend setup
 
@@ -37,10 +39,11 @@ The app runs in local browser-storage mode by default. Local data stays in that 
    ```
 
 3. Configure authentication email settings and the trusted initial admin role using a controlled server-side process; do not let users self-assign admin roles.
-4. Implement and deploy Edge Functions for search, import URL validation/research, scoring persistence, scheduled run coordination, and email outbox delivery. Keep provider credentials in Supabase Function secrets.
-5. Add authenticated Supabase client integration and owner-scoped synchronization before placing real user data in the backend.
+4. Copy `.env.example` to `.env.local` and set the Supabase project URL and anon/publishable key. The frontend uses Auth and RLS; no service-role secret belongs in this file.
+5. Deploy the discovery function and set `APP_ORIGIN`, `BRAVE_SEARCH_API_KEY`, `BRAVE_SEARCH_MONTHLY_LIMIT`, and `BRAVE_SEARCH_ENABLED=false` as Supabase Function secrets. The function has an atomic per-user monthly request cap. Enable it only after reviewing the current provider cost and source terms; the provider is off by default. [Brave's official pricing](https://brave.com/search/api/) currently lists paid Search API requests.
+6. Add a verified permitted source policy before discovery use. Configure email and deploy other Edge Functions only after choosing those providers and reviewing their price and terms.
 
-The current browser mode does not authenticate users or sync to Supabase. `supabase/migrations/202610200001_initial_schema.sql` is the data-security foundation, not a claim that an account has already been connected.
+Without Supabase values the app uses local browser storage. With Supabase values, it requires an authenticated account and syncs leads/profile through owner-scoped RLS. `supabase/migrations/202610200001_initial_schema.sql` must be applied before cloud mode can load data.
 
 ## Product safety and data handling
 

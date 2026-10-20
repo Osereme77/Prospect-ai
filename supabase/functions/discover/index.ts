@@ -21,18 +21,33 @@ Deno.serve(async request => {
   const { data: { user }, error: authError } = await supabase.auth.getUser(token)
   if (authError || !user) return json({ error: 'unauthorized' }, 401)
 
-  let payload: { query?: unknown; country?: unknown; count?: unknown }
+  let payload: { query?: unknown; country?: unknown; count?: unknown; kind?: unknown }
   try { payload = await request.json() } catch { return json({ error: 'invalid_json' }, 400) }
-  const query = typeof payload.query === 'string' ? payload.query.trim() : ''
-  if (!query || query.length > 600 || query.split(/\s+/).length > 75) return json({ error: 'invalid_query' }, 400)
+  const rawQuery = typeof payload.query === 'string' ? payload.query.trim() : ''
+  const kind = payload.kind === 'company' ? 'company' : 'opportunity'
+  const intent = kind === 'company' ? ' company business' : ' job contract freelance'
+  const query = `${rawQuery}${intent}`
+  if (!rawQuery || query.length > 600 || query.split(/\s+/).length > 75) return json({ error: 'invalid_query' }, 400)
   const country = typeof payload.country === 'string' && /^[A-Za-z]{2}$/.test(payload.country) ? payload.country.toUpperCase() : 'NG'
   const count = typeof payload.count === 'number' && Number.isInteger(payload.count) ? Math.min(20, Math.max(1, payload.count)) : 10
   const apiKey = Deno.env.get('BRAVE_SEARCH_API_KEY')
-  if (!apiKey) return json({ error: 'provider_not_configured' }, 503)
+  const enabled = Deno.env.get('BRAVE_SEARCH_ENABLED') === 'true'
+  const monthlyLimit = Number.parseInt(Deno.env.get('BRAVE_SEARCH_MONTHLY_LIMIT') ?? '', 10)
+  if (!enabled || !apiKey || !Number.isSafeInteger(monthlyLimit) || monthlyLimit < 1) return json({ error: 'provider_not_configured_or_disabled' }, 503)
 
   const idempotencyKey = request.headers.get('Idempotency-Key')?.slice(0, 120) || crypto.randomUUID()
-  const { data: run, error: runError } = await supabase.from('search_runs').insert({ owner_id: user.id, query, status: 'running', idempotency_key: idempotencyKey, started_at: new Date().toISOString() }).select('id').single()
+  const { data: run, error: runError } = await supabase.from('search_runs').insert({ owner_id: user.id, query, status: 'queued', idempotency_key: idempotencyKey }).select('id').single()
   if (runError) return json({ error: runError.code === '23505' ? 'duplicate_request' : 'run_creation_failed' }, runError.code === '23505' ? 409 : 500)
+  const { data: allowed, error: limitError } = await supabase.rpc('reserve_discovery_slot', { p_owner: user.id, p_run_id: run.id, p_monthly_limit: monthlyLimit })
+  if (limitError) {
+    await supabase.from('search_runs').update({ status: 'failed', error_code: 'quota_check_failed', finished_at: new Date().toISOString() }).eq('id', run.id).eq('owner_id', user.id)
+    return json({ error: 'quota_check_failed', run_id: run.id }, 503)
+  }
+  if (!allowed) {
+    await supabase.from('search_runs').update({ status: 'cancelled', error_code: 'monthly_limit', finished_at: new Date().toISOString() }).eq('id', run.id).eq('owner_id', user.id)
+    return json({ error: 'monthly_limit_reached' }, 429)
+  }
+  await supabase.from('search_runs').update({ status: 'running', started_at: new Date().toISOString() }).eq('id', run.id).eq('owner_id', user.id)
   try {
     const url = new URL('https://api.search.brave.com/res/v1/web/search')
     url.searchParams.set('q', query); url.searchParams.set('country', country); url.searchParams.set('search_lang', 'en'); url.searchParams.set('count', String(count))
@@ -59,8 +74,11 @@ function safePublicUrl(value: unknown): string | null {
   if (typeof value !== 'string' || value.length > 2048) return null
   try {
     const url = new URL(value)
-    if (!['https:', 'http:'].includes(url.protocol) || !url.hostname.includes('.') || url.username || url.password) return null
-    if (['localhost', '127.0.0.1', '::1'].includes(url.hostname.toLowerCase()) || /^10\.|^192\.168\.|^172\.(1[6-9]|2\d|3[01])\./.test(url.hostname)) return null
+    const host = url.hostname.toLowerCase()
+    if (!['https:', 'http:'].includes(url.protocol) || !host.includes('.') || url.username || url.password) return null
+    if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) return null
+    if (/^(0|10|127|169\.254|192\.168)\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host) || /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(host)) return null
+    if (/^(224|23[0-9]|24\d|25[0-5])\./.test(host) || host === '0.0.0.0' || host.includes(':')) return null
     return url.toString()
   } catch { return null }
 }
