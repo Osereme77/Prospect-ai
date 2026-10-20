@@ -2,7 +2,7 @@ import type { User } from '@supabase/supabase-js'
 import type { AppNotification, DiscoverySource, EvidenceItem, Lead, LeadStatus, ProspectProfile, SearchRun } from '../types'
 import { supabase } from './supabase'
 
-const dbStatus = (status: LeadStatus) => status.toLowerCase()
+const dbStatus = (status: LeadStatus): Lowercase<LeadStatus> => status.toLowerCase() as Lowercase<LeadStatus>
 const uiStatus = (status: string): LeadStatus => {
   const match: LeadStatus | undefined = (['New','Reviewed','Shortlisted','Contacted','Applied','Replied','Interviewing','Won','Lost','Dismissed'] as LeadStatus[]).find(item => item.toLowerCase() === status)
   return match ?? 'New'
@@ -79,7 +79,7 @@ export async function saveCloudWorkspace(user: User, leads: Lead[], profile?: Pr
   }
   if (!leads.length) return
   const { error: leadError } = await supabase.from('leads').upsert(leads.map(lead => ({
-    id: lead.id, owner_id: user.id, kind: lead.kind.toLowerCase(), title: lead.title, organization: lead.organization,
+    id: lead.id, owner_id: user.id, kind: lead.kind.toLowerCase() as 'company'|'opportunity', title: lead.title, organization: lead.organization,
     source_url: lead.url || null, location: lead.location || null, summary: lead.summary, status: dbStatus(lead.status),
     budget_signal: lead.budget ?? null, follow_up_at: lead.followUp ?? null, notes: lead.notes ?? '', duplicate_of:lead.duplicateOf??null,
     source_label: lead.source, source_id:lead.sourceId??null, search_run_id:lead.searchRunId??null, tags: lead.tags, research_gaps:lead.researchGaps??[], posted_label: lead.postedAt, score: lead.score, score_reason: lead.scoreReason,
