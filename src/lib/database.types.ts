@@ -77,7 +77,7 @@ export type Database = {
       admin_retry_notification_outbox: { Args: { p_id: string }; Returns: boolean }
       admin_set_discovery_source_enabled: { Args: { p_id: string; p_enabled: boolean }; Returns: boolean }
       admin_discovery_usage: { Args: Record<PropertyKey, never>; Returns: { month_start: string; total_requests: number; active_accounts: number }[] }
-      reserve_discovery_slot: { Args: { p_owner: string; p_run_id: string; p_monthly_limit: number }; Returns: boolean }
+      reserve_discovery_slot: { Args: { p_owner: string; p_run_id: string; p_owner_monthly_limit: number; p_global_monthly_limit: number }; Returns: boolean }
     }
     Enums: {
       lead_kind: 'opportunity' | 'company'

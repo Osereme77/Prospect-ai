@@ -19,7 +19,7 @@ flowchart LR
   Web -.->|No cloud config| Local[(Browser local storage)]
 ```
 
-The browser contains only the Supabase project URL and publishable key (or a legacy anon key). Secret/service-role credentials stay in managed server-side secrets. The discovery function checks the user session, requires owner terms and storage-rights consent plus a separate operator storage-rights flag, validates request bounds, reserves the lower per-user/global monthly quota, filters returned URLs, and records source/run attribution. Removing the source deletes its stored result leads and linked evidence, scores, and notifications. It does not fetch result pages or submit applications. Migrations 007–008 add RLS-protected operational reads for admin roles, aggregate monthly usage, audited source pause/resume controls, and an audited RPC to retry failed notification email; they do not grant ordinary users cross-account visibility.
+The browser contains only the Supabase project URL and publishable key (or a legacy anon key). Secret/service-role credentials stay in managed server-side secrets. The discovery function checks the user session, requires owner terms and storage-rights consent plus a separate operator storage-rights flag, validates request bounds, reserves separate account and provider-wide monthly quotas through an atomic service-role-only RPC, filters returned URLs, and records source/run attribution. Removing the source deletes its stored result leads and linked evidence, scores, and notifications. It does not fetch result pages or submit applications. Migrations 007–009 add RLS-protected operational reads for admin roles, aggregate monthly usage, audited source pause/resume controls, an audited RPC to retry failed notification email, and serialized quota reservation; they do not grant ordinary users cross-account visibility.
 
 ## Data model
 
@@ -39,7 +39,7 @@ erDiagram
   AUTH_USERS ||--o{ AUDIT_LOGS : acts
 ```
 
-All workspace reads and writes use owner-scoped RLS. Duplicate links must point to a canonical lead belonging to the same owner. Score snapshots are append-oriented and use a scoring version. A qualifying notification is always saved in-app; a database trigger separately queues email only when the owner opted in and their Auth email is verified. The outbox stores no recipient address. A server-only worker looks up the confirmed address, sends through Resend with a stable idempotency key, and records bounded retry/failure states. The worker and trigger are implemented but remain inactive until the migration, provider secrets, verified sender, and scheduler are configured. Audit event writers are not deployed.
+All workspace reads and writes use owner-scoped RLS. Duplicate links must point to a canonical lead belonging to the same owner. Score snapshots are append-oriented and use a scoring version. A qualifying notification is always saved in-app; a database trigger separately queues email only when the owner opted in and their Auth email is verified. The outbox stores no recipient address. A server-only worker looks up the confirmed address, sends through Resend with a stable idempotency key, and records bounded retry/failure states. The worker and trigger are implemented but remain inactive until the migration, provider secrets, verified sender, and scheduler are configured. Audit event writers cover source pause/resume and notification retry; broader operational changes still need writers.
 
 ## Environments and secret handling
 
@@ -49,7 +49,7 @@ All workspace reads and writes use owner-scoped RLS. Duplicate links must point 
 | Local cloud development | `.env.local`, ignored by Git | Supabase project selected by owner | Supabase Edge Function secrets only |
 | Preview/production | Host-managed public Supabase URL/key | Separate Supabase environments recommended | Managed server secrets, never `VITE_*` |
 
-The repository has no connected cloud project, hosting environment, or secret store configured. Use additive migrations through `supabase db push`; verify backup and rollback before production changes. Trusted Super Admin provisioning and recovery steps are documented in [OWNER_BOOTSTRAP.md](OWNER_BOOTSTRAP.md). The Admin screen is gated by the database role and adds no browser-held privileged credential.
+The development project `pugvqkytxutnfucisurl` is linked through the Supabase CLI, and migrations 001–009 are applied with local and remote history aligned. No hosting environment or managed secret store is configured. Use additive migrations through `supabase db push`; verify backup and rollback before production changes. Trusted Super Admin provisioning and recovery steps are documented in [OWNER_BOOTSTRAP.md](OWNER_BOOTSTRAP.md). The Admin screen is gated by the database role and adds no browser-held privileged credential. See [the design system](DESIGN_SYSTEM.md) and [ADRs](adr/) for implementation decisions and pending owner choices.
 
 ## Deferred boundaries
 

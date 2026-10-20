@@ -27,21 +27,22 @@ npm run dev
 
 The app runs in local browser-storage mode by default. Local data stays in that browser and is not synced or backed up. Do not put provider keys in `VITE_*` variables or in browser storage.
 
-To use Supabase Auth/cloud mode, copy `.env.example` to `.env.local`, fill in the project URL and publishable key, then restart Vite. Apply all versioned migrations first; cloud mode will stop at a setup error if its schema is unavailable.
+To use Supabase Auth/cloud mode, copy `.env.example` to `.env.local`, fill in the project URL and publishable key, then restart Vite. Apply all versioned migrations first; cloud mode will stop at a setup error if its schema is unavailable. See the [design system](DOCS/DESIGN_SYSTEM.md) for the visual tokens, layout, component states, and accessibility baseline.
 
 ## Backend setup
 
-1. Create a Supabase project and install the Supabase CLI.
+1. Create a Supabase project and install the Supabase CLI. Authenticate once with `npm exec supabase -- login`; the one-time browser code is private and should not be shared.
 2. Link the project and apply the versioned database migrations:
 
    ```sh
-   supabase link --project-ref YOUR_PROJECT_REF
-   supabase db push
+   npm exec supabase -- link --project-ref YOUR_PROJECT_REF
+   npm exec supabase -- db push --dry-run
+   npm exec supabase -- db push
    ```
 
 3. Configure authentication email settings and provision the owner role using the trusted process in [DOCS/OWNER_BOOTSTRAP.md](DOCS/OWNER_BOOTSTRAP.md); do not let users self-assign admin roles.
 4. Copy `.env.example` to `.env.local` and set the Supabase project URL and publishable key. The frontend uses Auth and RLS; put only the publishable key in this file, never a secret/service-role key.
-5. Deploy the discovery function and set `APP_ORIGIN`, `BRAVE_SEARCH_API_KEY`, `BRAVE_SEARCH_MONTHLY_LIMIT`, `BRAVE_SEARCH_ENABLED=false`, and `BRAVE_SEARCH_STORAGE_RIGHTS_CONFIRMED=false` as Supabase Function secrets. The function has an atomic per-user monthly request cap. Search stays disabled until both owner-level approval and server-side provider approval are set. Because the app stores result titles, URLs, and snippets, enable storage only with a Brave plan that explicitly grants storage rights; the API terms prohibit storing results without those rights. Review [Brave pricing](https://brave.com/search/api/) and the [Search API terms](https://api-dashboard.search.brave.com/documentation/resources/terms-of-service) before enabling.
+5. Deploy the discovery function with `npm exec supabase -- functions deploy discover` and set `APP_ORIGIN`, `BRAVE_SEARCH_API_KEY`, `BRAVE_SEARCH_MONTHLY_LIMIT`, `BRAVE_SEARCH_ENABLED=false`, and `BRAVE_SEARCH_STORAGE_RIGHTS_CONFIRMED=false` as Supabase Function secrets. The function has atomic, separate per-account and provider-wide monthly request caps. Search stays disabled until both owner-level approval and server-side provider approval are set. Because the app stores result titles, URLs, and snippets, enable storage only with a Brave plan that explicitly grants storage rights; the API terms prohibit storing results without those rights. Review [Brave pricing](https://brave.com/search/api/) and the [Search API terms](https://api-dashboard.search.brave.com/documentation/resources/terms-of-service) before enabling.
 6. Add a verified permitted source policy before discovery use. To enable optional email alerts, verify a sender domain with Resend, set `RESEND_API_KEY`, `EMAIL_FROM`, and a high-entropy `OUTBOX_WORKER_SECRET` as Supabase Edge Function secrets, then deploy `dispatch-notification-email`. Configure a scheduler to invoke it with project service-role authorization and the worker secret. Keep both credentials server-side; use the owner-verified Auth email as the destination. Do not enable delivery until a test message, opt-out, and retry have been checked. See [ADR 0004](DOCS/adr/0004-notification-delivery.md).
 
 Without Supabase values the app uses local browser storage. With Supabase values, it requires an authenticated account and syncs leads/profile/evidence through owner-scoped RLS. Apply all versioned migrations before cloud mode can load data.

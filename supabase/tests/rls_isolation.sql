@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select extensions.plan(13);
+select extensions.plan(20);
 
 insert into auth.users (
   instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -10,6 +10,14 @@ insert into auth.users (
 ) values
   ('00000000-0000-0000-0000-000000000000','a1111111-1111-4111-8111-111111111111','authenticated','authenticated','rls-owner-a@example.invalid','',now(),'{}','{}',now(),now()),
   ('00000000-0000-0000-0000-000000000000','b2222222-2222-4222-8222-222222222222','authenticated','authenticated','rls-owner-b@example.invalid','',now(),'{}','{}',now(),now());
+
+insert into public.search_runs(id,owner_id,query,idempotency_key) values
+  ('e1111111-1111-4111-8111-111111111111','a1111111-1111-4111-8111-111111111111','quota a 1','quota-a-1'),
+  ('e2222222-2222-4222-8222-222222222222','a1111111-1111-4111-8111-111111111111','quota a 2','quota-a-2'),
+  ('e3333333-3333-4333-8333-333333333333','a1111111-1111-4111-8111-111111111111','quota a 3','quota-a-3'),
+  ('f1111111-1111-4111-8111-111111111111','b2222222-2222-4222-8222-222222222222','quota b 1','quota-b-1'),
+  ('f2222222-2222-4222-8222-222222222222','b2222222-2222-4222-8222-222222222222','quota b 2','quota-b-2'),
+  ('f3333333-3333-4333-8333-333333333333','b2222222-2222-4222-8222-222222222222','quota b 3','quota-b-3');
 
 insert into public.leads(id,owner_id,kind,title,organization)
 values ('c3333333-3333-4333-8333-333333333333','a1111111-1111-4111-8111-111111111111','opportunity','Owner A lead','Example');
@@ -55,6 +63,22 @@ select extensions.throws_ok(
   $$select * from public.admin_discovery_usage()$$,
   '42501',null,'ordinary users cannot inspect aggregate discovery usage'
 );
+select extensions.throws_ok(
+  $$select public.reserve_discovery_slot('b2222222-2222-4222-8222-222222222222','f1111111-1111-4111-8111-111111111111',10000,1000000)$$,
+  '42501',null,'ordinary users cannot reserve discovery quota directly'
+);
+reset role;
+set local role service_role;
+select set_config('request.jwt.claim.role','service_role',true);
+select extensions.ok(public.reserve_discovery_slot('a1111111-1111-4111-8111-111111111111','e1111111-1111-4111-8111-111111111111',100,2),'first account can reserve under global cap');
+select extensions.ok(public.reserve_discovery_slot('a1111111-1111-4111-8111-111111111111','e2222222-2222-4222-8222-222222222222',100,2),'second request can use the remaining global slot');
+select extensions.ok(not public.reserve_discovery_slot('a1111111-1111-4111-8111-111111111111','e3333333-3333-4333-8333-333333333333',100,2),'provider-wide cap blocks further accounts');
+select extensions.ok(public.reserve_discovery_slot('b2222222-2222-4222-8222-222222222222','f1111111-1111-4111-8111-111111111111',2,100),'second account can reserve under account cap');
+select extensions.ok(public.reserve_discovery_slot('b2222222-2222-4222-8222-222222222222','f2222222-2222-4222-8222-222222222222',2,100),'second account can use its remaining slot');
+select extensions.ok(not public.reserve_discovery_slot('b2222222-2222-4222-8222-222222222222','f3333333-3333-4333-8333-333333333333',2,100),'per-account cap blocks excess requests');
+reset role;
+set local role authenticated;
+select set_config('request.jwt.claim.sub','b2222222-2222-4222-8222-222222222222',true);
 update public.leads set title='Changed by B' where id='c3333333-3333-4333-8333-333333333333';
 reset role;
 set local role authenticated;

@@ -3,7 +3,7 @@
 // Configure: supabase secrets set BRAVE_SEARCH_API_KEY=...
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { BraveSearchProvider } from '../_shared/discovery.ts'
-import { effectiveSourceRequestLimit } from '../_shared/sourcePolicy.ts'
+import { effectiveSourceRequestLimits } from '../_shared/sourcePolicy.ts'
 
 const provider = new BraveSearchProvider()
 
@@ -20,8 +20,10 @@ Deno.serve(async request => {
   if (request.method !== 'POST') return json({ error: 'method_not_allowed' }, 405)
   const token = request.headers.get('Authorization')?.replace(/^Bearer\s+/i, '')
   const projectUrl = Deno.env.get('SUPABASE_URL'), anonKey = Deno.env.get('SUPABASE_ANON_KEY')
-  if (!token || !projectUrl || !anonKey) return json({ error: 'unauthorized' }, 401)
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (!token || !projectUrl || !anonKey || !serviceRoleKey) return json({ error: 'unauthorized' }, 401)
   const supabase = createClient(projectUrl, anonKey, { global: { headers: { Authorization: `Bearer ${token}` } } })
+  const privileged = createClient(projectUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
   const { data: { user }, error: authError } = await supabase.auth.getUser(token)
   if (authError || !user) return json({ error: 'unauthorized' }, 401)
 
@@ -43,13 +45,18 @@ Deno.serve(async request => {
   const { data: source, error: sourceError } = await supabase.from('discovery_sources')
     .select('id,enabled,config').eq('owner_id',user.id).eq('kind','search_api').eq('name',provider.name).maybeSingle()
   if (sourceError) return json({ error: 'source_registry_unavailable' }, 503)
-  const effectiveLimit = effectiveSourceRequestLimit(Boolean(source?.enabled), source?.config, monthlyLimit)
-  if (effectiveLimit === null) return json({ error: 'source_not_approved_by_owner' }, 403)
+  const limits = effectiveSourceRequestLimits(Boolean(source?.enabled), source?.config, monthlyLimit)
+  if (limits === null) return json({ error: 'source_not_approved_by_owner' }, 403)
 
   const idempotencyKey = request.headers.get('Idempotency-Key')?.slice(0, 120) || crypto.randomUUID()
   const { data: run, error: runError } = await supabase.from('search_runs').insert({ owner_id: user.id, source_id:source.id, query, status: 'queued', idempotency_key: idempotencyKey }).select('id').single()
   if (runError) return json({ error: runError.code === '23505' ? 'duplicate_request' : 'run_creation_failed' }, runError.code === '23505' ? 409 : 500)
-  const { data: allowed, error: limitError } = await supabase.rpc('reserve_discovery_slot', { p_owner: user.id, p_run_id: run.id, p_monthly_limit: effectiveLimit })
+  const { data: allowed, error: limitError } = await privileged.rpc('reserve_discovery_slot', {
+    p_owner: user.id,
+    p_run_id: run.id,
+    p_owner_monthly_limit: limits.ownerMonthlyLimit,
+    p_global_monthly_limit: limits.globalMonthlyLimit,
+  })
   if (limitError) {
     await supabase.from('search_runs').update({ status: 'failed', error_code: 'quota_check_failed', finished_at: new Date().toISOString() }).eq('id', run.id).eq('owner_id', user.id)
     return json({ error: 'quota_check_failed', run_id: run.id }, 503)

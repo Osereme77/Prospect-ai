@@ -8,7 +8,7 @@ import { normalizeBraveResults } from '../supabase/functions/_shared/discovery.t
 import { buildSuggestedQuery } from '../src/lib/query.ts'
 import { createEvidenceItem, scoreEvidenceChanges, setEvidenceReview } from '../src/lib/evidence.ts'
 import { countFollowUpsDue, isFollowUpDue } from '../src/lib/followups.ts'
-import { effectiveSourceRequestLimit } from '../supabase/functions/_shared/sourcePolicy.ts'
+import { effectiveSourceRequestLimits } from '../supabase/functions/_shared/sourcePolicy.ts'
 import { reviewPublicPage } from '../src/lib/research.ts'
 import { notificationEmail, retryAt } from '../supabase/functions/_shared/emailOutbox.ts'
 
@@ -148,14 +148,14 @@ test('follow-up metrics count only valid due dates on open leads', () => {
   assert.equal(countFollowUpsDue([filterSample({followUp:'2026-10-19'}),filterSample({id:'future',followUp:'2026-10-25'}),filterSample({id:'closed',followUp:'2026-10-19',status:'Lost'})],now),1)
 })
 
-test('source approval requires enabled consent and enforces the lower monthly cap', () => {
+test('source approval keeps owner and provider-wide monthly caps separate', () => {
   const config={monthly_limit:7,terms_reviewed_at:'2026-10-20T10:00:00.000Z',storage_rights_confirmed_at:'2026-10-20T10:00:00.000Z'}
   const now=Date.parse('2026-10-20T12:00:00.000Z')
-  assert.equal(effectiveSourceRequestLimit(true,config,20,now),7)
-  assert.equal(effectiveSourceRequestLimit(true,config,3,now),3)
-  assert.equal(effectiveSourceRequestLimit(false,config,20,now),null)
-  assert.equal(effectiveSourceRequestLimit(true,{...config,terms_reviewed_at:'invalid'},20,now),null)
-  assert.equal(effectiveSourceRequestLimit(true,{...config,terms_reviewed_at:'2026-10-21T00:00:00.000Z'},20,now),null)
-  assert.equal(effectiveSourceRequestLimit(true,{...config,monthly_limit:0},20,now),null)
-  assert.equal(effectiveSourceRequestLimit(true,{monthly_limit:7,terms_reviewed_at:config.terms_reviewed_at},20,now),null)
+  assert.deepEqual(effectiveSourceRequestLimits(true,config,20,now),{ownerMonthlyLimit:7,globalMonthlyLimit:20})
+  assert.deepEqual(effectiveSourceRequestLimits(true,config,3,now),{ownerMonthlyLimit:7,globalMonthlyLimit:3})
+  assert.equal(effectiveSourceRequestLimits(false,config,20,now),null)
+  assert.equal(effectiveSourceRequestLimits(true,{...config,terms_reviewed_at:'invalid'},20,now),null)
+  assert.equal(effectiveSourceRequestLimits(true,{...config,terms_reviewed_at:'2026-10-21T00:00:00.000Z'},20,now),null)
+  assert.equal(effectiveSourceRequestLimits(true,{...config,monthly_limit:0},20,now),null)
+  assert.equal(effectiveSourceRequestLimits(true,{monthly_limit:7,terms_reviewed_at:config.terms_reviewed_at},20,now),null)
 })
