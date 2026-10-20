@@ -1,5 +1,5 @@
 import type { User } from '@supabase/supabase-js'
-import type { AppNotification, Lead, LeadStatus, ProspectProfile, SearchRun } from '../types'
+import type { AppNotification, EvidenceItem, Lead, LeadStatus, ProspectProfile, SearchRun } from '../types'
 import { supabase } from './supabase'
 
 const dbStatus = (status: LeadStatus) => status.toLowerCase()
@@ -12,7 +12,7 @@ const safeDate = (value: string | null) => value ? value.slice(0, 10) : undefine
 export async function loadCloudWorkspace(user: User): Promise<{ leads: Lead[]; profile: ProspectProfile; notifications: AppNotification[]; runs:SearchRun[] }> {
   if (!supabase) throw new Error('Cloud mode is not configured.')
   const [leadResult, profileResult, notificationResult, runResult] = await Promise.all([
-    supabase.from('leads').select('*, lead_evidence(claim,source_url), lead_scores(score,relevance,need_evidence,budget_signals,freshness,source_confidence,explanation,created_at)').eq('owner_id', user.id).order('created_at', { ascending: false }),
+    supabase.from('leads').select('*, lead_evidence(claim,source_url,observed_at,evidence_type,verification_status,reviewed_at), lead_scores(score,relevance,need_evidence,budget_signals,freshness,source_confidence,explanation,created_at)').eq('owner_id', user.id).order('created_at', { ascending: false }),
     supabase.from('profiles').select('display_name,headline,skills,services,markets,portfolio_links,experience_summary,notification_threshold').eq('id', user.id).maybeSingle(),
     supabase.from('notifications').select('id,kind,title,body,lead_id,read_at,created_at').eq('owner_id', user.id).order('created_at', { ascending: false }),
     supabase.from('search_runs').select('id,query,status,result_count,created_at,finished_at,error_summary').eq('owner_id',user.id).order('created_at',{ascending:false}).limit(10),
@@ -22,14 +22,15 @@ export async function loadCloudWorkspace(user: User): Promise<{ leads: Lead[]; p
   if (notificationResult.error) throw notificationResult.error
   if (runResult.error) throw runResult.error
   const leads: Lead[] = (leadResult.data ?? []).map(row => {
-    const evidence = (row.lead_evidence ?? []).map((item: { claim: string }) => item.claim)
+    const evidenceDetails:EvidenceItem[]=(row.lead_evidence??[]).map((item:{claim:string;source_url:string;observed_at:string;evidence_type:string;verification_status:string;reviewed_at:string|null})=>({claim:item.claim,sourceUrl:item.source_url,observedAt:item.observed_at,type:item.evidence_type==='owner_note'?'owner_note':'public_page',status:item.verification_status==='verified'?'verified':'unverified',reviewedAt:item.reviewed_at??undefined}))
+    const evidence = evidenceDetails.map(item => item.claim)
     const scoreRow = [...(row.lead_scores ?? [])].sort((a: { created_at:string }, b: { created_at:string }) => Date.parse(b.created_at)-Date.parse(a.created_at))[0]
     return {
       id: row.id, title: row.title, organization: row.organization, kind: row.kind === 'company' ? 'Company' : 'Opportunity',
       url: row.source_url ?? '', location: row.location ?? 'Not specified', postedAt: row.posted_label ?? 'Saved prospect',
       summary: row.summary ?? '', status: uiStatus(row.status), score: scoreRow?.score ?? row.score ?? 50,
       scoreReason: row.score_reason ?? 'Score not calculated yet.', source: row.source_label ?? 'Saved prospect',
-      tags: row.tags ?? [], evidence, budget: row.budget_signal ?? undefined, followUp: safeDate(row.follow_up_at),
+      tags: row.tags ?? [], evidence, evidenceDetails, budget: row.budget_signal ?? undefined, followUp: safeDate(row.follow_up_at),
       notes: row.notes ?? '', createdAt: row.created_at,
       scoreBreakdown: scoreRow ? { relevance:scoreRow.relevance, needEvidence:scoreRow.need_evidence, budgetSignals:scoreRow.budget_signals, freshness:scoreRow.freshness, sourceConfidence:scoreRow.source_confidence } : undefined,
       duplicateOf:row.duplicate_of??undefined,
@@ -64,9 +65,12 @@ export async function saveCloudWorkspace(user: User, leads: Lead[], profile?: Pr
     updated_at: new Date().toISOString(),
   })), { onConflict: 'id' })
   if (leadError) throw leadError
-  const evidence = leads.flatMap(lead => lead.evidence.filter(claim => Boolean(lead.url)).map(claim => ({ lead_id: lead.id, owner_id: user.id, source_url: lead.url, claim })))
+  const evidence = leads.flatMap(lead => {
+    const items=lead.evidenceDetails?.length?lead.evidenceDetails:lead.evidence.filter(claim=>Boolean(lead.url)).map(claim=>({claim,sourceUrl:lead.url,observedAt:lead.createdAt,type:'public_page' as const,status:'unverified' as const}))
+    return items.map(item=>({lead_id:lead.id,owner_id:user.id,source_url:item.sourceUrl,claim:item.claim,observed_at:item.observedAt,evidence_type:item.type,verification_status:item.status,reviewed_at:item.reviewedAt??null}))
+  })
   if (evidence.length) {
-    const { error } = await supabase.from('lead_evidence').upsert(evidence, { onConflict: 'lead_id,source_url,claim', ignoreDuplicates: true })
+    const { error } = await supabase.from('lead_evidence').upsert(evidence, { onConflict: 'lead_id,source_url,claim' })
     if (error) throw error
   }
   const scoreable = leads.filter(lead => lead.scoreBreakdown)

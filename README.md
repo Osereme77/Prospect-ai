@@ -43,7 +43,7 @@ To use Supabase Auth/cloud mode, copy `.env.example` to `.env.local`, fill in th
 5. Deploy the discovery function and set `APP_ORIGIN`, `BRAVE_SEARCH_API_KEY`, `BRAVE_SEARCH_MONTHLY_LIMIT`, and `BRAVE_SEARCH_ENABLED=false` as Supabase Function secrets. The function has an atomic per-user monthly request cap. Enable it only after reviewing the current provider cost and source terms; the provider is off by default. [Brave's official pricing](https://brave.com/search/api/) currently lists paid Search API requests.
 6. Add a verified permitted source policy before discovery use. Configure email and deploy other Edge Functions only after choosing those providers and reviewing their price and terms.
 
-Without Supabase values the app uses local browser storage. With Supabase values, it requires an authenticated account and syncs leads/profile through owner-scoped RLS. Apply `202610200001_initial_schema.sql` and `202610200002_profile_context.sql` before cloud mode can load data.
+Without Supabase values the app uses local browser storage. With Supabase values, it requires an authenticated account and syncs leads/profile/evidence through owner-scoped RLS. Apply all versioned migrations before cloud mode can load data.
 
 ## Product safety and data handling
 

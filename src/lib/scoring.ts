@@ -5,16 +5,17 @@ export function calculateScore(input: ScoreInput): number {
   return Math.round(input.relevance * SCORE_WEIGHTS.relevance + input.needEvidence * SCORE_WEIGHTS.needEvidence + input.budgetSignals * SCORE_WEIGHTS.budgetSignals + input.freshness * SCORE_WEIGHTS.freshness + input.sourceConfidence * SCORE_WEIGHTS.sourceConfidence)
 }
 
-export function scoreLead(text: string, skills: string[], services: string[], hasPublicUrl: boolean, hasEvidence: boolean) {
+export function scoreLead(text: string, skills: string[], services: string[], hasPublicUrl: boolean, hasEvidence: boolean, hasVerifiedEvidence = false) {
   const normalized = new Set((text.toLowerCase().match(/[a-z0-9+#.]+/g) ?? []).map(token => token.trim()).filter(Boolean))
   const interests = [...skills, ...services].map(item => item.toLowerCase().trim()).filter(Boolean)
   const matching = interests.filter(item => normalized.has(item) || item.split(/\s+/).some(word => normalized.has(word)))
   const parts: ScoreInput = {
     relevance: interests.length ? Math.round(matching.length / interests.length * 100) : 0,
-    needEvidence: hasEvidence ? 55 : 15,
+    needEvidence: hasEvidence ? (hasVerifiedEvidence ? 80 : 55) : 15,
     budgetSignals: 50, // An unknown budget stays neutral; it is not a rejection.
     freshness: 50, // Do not infer recency without a source date.
-    sourceConfidence: hasPublicUrl ? (hasEvidence ? 55 : 40) : 0,
+    sourceConfidence: hasPublicUrl ? (hasVerifiedEvidence ? 85 : hasEvidence ? 55 : 40) : 0,
   }
-  return { score: calculateScore(parts), breakdown: parts, explanation: `Skill/service overlap ${matching.length}/${interests.length}; need signal ${hasEvidence ? 'has an unverified source excerpt' : 'is not recorded'}; budget unknown; freshness unverified.` }
+  const evidenceSummary=hasVerifiedEvidence?'includes owner-reviewed evidence':hasEvidence?'has unverified source evidence':'is not recorded'
+  return { score: calculateScore(parts), breakdown: parts, explanation: `Skill/service overlap ${matching.length}/${interests.length}; need signal ${evidenceSummary}; budget unknown; freshness unverified.` }
 }

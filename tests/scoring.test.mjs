@@ -6,6 +6,7 @@ import { leadsToCsv } from '../src/lib/export.ts'
 import { filterLeads } from '../src/lib/filters.ts'
 import { normalizeBraveResults } from '../supabase/functions/_shared/discovery.ts'
 import { buildSuggestedQuery } from '../src/lib/query.ts'
+import { createEvidenceItem, scoreEvidenceChanges, setEvidenceReview } from '../src/lib/evidence.ts'
 
 test('score uses the documented weights and rounds to an integer', () => {
   assert.equal(calculateScore({ relevance: 100, needEvidence: 80, budgetSignals: 50, freshness: 60, sourceConfidence: 90 }), 81)
@@ -73,4 +74,25 @@ test('Brave adapter normalizes bounded evidence and filters unsafe result URLs',
 test('discovery query suggestions combine unique profile skills, services, and a target market', () => {
   assert.equal(buildSuggestedQuery(['React',' TypeScript ','react','Node.js','Python','Go'],['Web application development','AI automation','Extra service'],['Nigeria','Global']), 'React TypeScript Node.js Python Web application development AI automation Nigeria')
   assert.equal(buildSuggestedQuery(['  ',''],[],[]), '')
+})
+
+test('evidence captures a canonical public URL and review timestamp', () => {
+  const item = createEvidenceItem('  The page lists a React contract role.  ','https://Example.com/jobs/react?utm_source=feed','2026-10-20T12:00:00.000Z')
+  assert.deepEqual(item,{claim:'The page lists a React contract role.',sourceUrl:'https://example.com/jobs/react',observedAt:'2026-10-20T12:00:00.000Z',type:'public_page',status:'unverified'})
+  const reviewed=setEvidenceReview(item,true,'2026-10-20T13:00:00.000Z')
+  assert.equal(reviewed.status,'verified')
+  assert.equal(reviewed.reviewedAt,'2026-10-20T13:00:00.000Z')
+  assert.equal(setEvidenceReview(reviewed,false).reviewedAt,undefined)
+  assert.throws(()=>createEvidenceItem('A claim','http://127.0.0.1/admin'))
+  assert.throws(()=>createEvidenceItem('','https://example.com'))
+})
+
+test('reviewed evidence updates the explainable score and score components', () => {
+  const lead=filterSample(),profile={name:'Test',role:'Developer',skills:['React'],services:['Web development'],markets:['Nigeria'],portfolioLinks:[],experienceSummary:'',notificationThreshold:65}
+  const item=createEvidenceItem('Page names a React developer contract.','https://example.com/job','2026-10-20T12:00:00.000Z')
+  const unreviewed=scoreEvidenceChanges(lead,profile,[item])
+  const reviewed=scoreEvidenceChanges(lead,profile,[setEvidenceReview(item,true,'2026-10-20T13:00:00.000Z')])
+  assert.ok(reviewed.score>unreviewed.score)
+  assert.equal(reviewed.scoreBreakdown.needEvidence,80)
+  assert.match(reviewed.scoreReason,/owner-reviewed evidence/)
 })
