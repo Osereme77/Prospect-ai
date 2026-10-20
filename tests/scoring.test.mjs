@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import { calculateScore, scoreLead } from '../src/lib/scoring.ts'
 import { canonicalPublicUrl } from '../src/lib/urls.ts'
 import { leadsToCsv } from '../src/lib/export.ts'
+import { filterLeads } from '../src/lib/filters.ts'
 
 test('score uses the documented weights and rounds to an integer', () => {
   assert.equal(calculateScore({ relevance: 100, needEvidence: 80, budgetSignals: 50, freshness: 60, sourceConfidence: 90 }), 81)
@@ -35,4 +36,19 @@ test('CSV export quotes commas, quotes, and newlines without losing fields', () 
   assert.match(csv, /"Senior ""React"", engineer"/)
   assert.match(csv, /"A,B"/)
   assert.match(csv, /"reason\nnext"/)
+})
+
+const filterSample = (overrides = {}) => ({id:'lead-1',kind:'Opportunity',title:'React workflow engineer',organization:'Example Labs',url:'https://example.com/job',location:'Lagos, Nigeria',postedAt:'Today',summary:'Build a React and Node workflow',status:'New',score:82,scoreReason:'reason',source:'Company site',tags:['React','TypeScript'],evidence:[],budget:'Not disclosed',createdAt:'2026-10-19T12:00:00.000Z',...overrides})
+
+test('lead filters compose across status, score, source, service, location, and budget knowledge', () => {
+  const leads = [filterSample(), filterSample({id:'lead-2',status:'Reviewed',score:60,source:'Board',tags:['Vue'],budget:'USD 2,000'})]
+  assert.deepEqual(filterLeads(leads,{status:'New',minScore:80,source:'Company site',service:'react',location:'lagos',budget:'unknown'}).map(x=>x.id),['lead-1'])
+  assert.deepEqual(filterLeads(leads,{budget:'known'}).map(x=>x.id),['lead-2'])
+})
+
+test('lead filters support recent records and unread notifications', () => {
+  const leads = [filterSample(),filterSample({id:'lead-old',createdAt:'2026-08-01T12:00:00.000Z'})]
+  const notices = [{id:'n1',kind:'lead_match',title:'Match',body:'Review',createdAt:'2026-10-20T00:00:00.000Z',leadId:'lead-1'}]
+  assert.deepEqual(filterLeads(leads,{withinDays:7,unreadOnly:true},notices,Date.parse('2026-10-20T12:00:00.000Z')).map(x=>x.id),['lead-1'])
+  assert.deepEqual(filterLeads(leads,{unreadOnly:true},[{...notices[0],readAt:'2026-10-20T01:00:00.000Z'}]).map(x=>x.id),[])
 })
