@@ -9,20 +9,22 @@ const uiStatus = (status: string): LeadStatus => {
 }
 const safeDate = (value: string | null) => value ? value.slice(0, 10) : undefined
 
-export async function loadCloudWorkspace(user: User): Promise<{ leads: Lead[]; profile: ProspectProfile; notifications: AppNotification[]; runs:SearchRun[]; sources:DiscoverySource[] }> {
+export async function loadCloudWorkspace(user: User): Promise<{ leads: Lead[]; profile: ProspectProfile; notifications: AppNotification[]; runs:SearchRun[]; sources:DiscoverySource[]; role:'user'|'admin'|'super_admin' }> {
   if (!supabase) throw new Error('Cloud mode is not configured.')
-  const [leadResult, profileResult, notificationResult, runResult, sourceResult] = await Promise.all([
+  const [leadResult, profileResult, notificationResult, runResult, sourceResult,roleResult] = await Promise.all([
     supabase.from('leads').select('*, lead_evidence(claim,source_url,observed_at,evidence_type,verification_status,reviewed_at), lead_scores(score,relevance,need_evidence,budget_signals,freshness,source_confidence,explanation,created_at)').eq('owner_id', user.id).order('created_at', { ascending: false }),
     supabase.from('profiles').select('display_name,headline,skills,services,markets,portfolio_links,experience_summary,notification_threshold,email_notifications_enabled').eq('id', user.id).maybeSingle(),
     supabase.from('notifications').select('id,kind,title,body,lead_id,read_at,created_at').eq('owner_id', user.id).order('created_at', { ascending: false }),
     supabase.from('search_runs').select('id,query,status,result_count,created_at,finished_at,error_summary').eq('owner_id',user.id).order('created_at',{ascending:false}).limit(10),
     supabase.from('discovery_sources').select('id,name,kind,base_url,enabled,config').eq('owner_id',user.id).order('created_at',{ascending:true}),
+    supabase.from('user_roles').select('role').eq('user_id',user.id).maybeSingle(),
   ])
   if (leadResult.error) throw leadResult.error
   if (profileResult.error) throw profileResult.error
   if (notificationResult.error) throw notificationResult.error
   if (runResult.error) throw runResult.error
   if (sourceResult.error) throw sourceResult.error
+  if (roleResult.error) throw roleResult.error
   const leads: Lead[] = (leadResult.data ?? []).map(row => {
     const evidenceDetails:EvidenceItem[]=(row.lead_evidence??[]).map((item:{claim:string;source_url:string;observed_at:string;evidence_type:string;verification_status:string;reviewed_at:string|null})=>({claim:item.claim,sourceUrl:item.source_url,observedAt:item.observed_at,type:item.evidence_type==='owner_note'?'owner_note':'public_page',status:item.verification_status==='verified'?'verified':'unverified',reviewedAt:item.reviewed_at??undefined}))
     const evidence = evidenceDetails.map(item => item.claim)
@@ -44,7 +46,8 @@ export async function loadCloudWorkspace(user: User): Promise<{ leads: Lead[]; p
   const notifications:AppNotification[]=(notificationResult.data??[]).map(row=>({id:row.id,kind:row.kind,title:row.title,body:row.body,leadId:row.lead_id??undefined,readAt:row.read_at??undefined,createdAt:row.created_at}))
   const runs:SearchRun[]=(runResult.data??[]).map(row=>({id:row.id,query:row.query,status:row.status,resultCount:row.result_count,createdAt:row.created_at,finishedAt:row.finished_at??undefined,error:row.error_summary??undefined}))
   const sources:DiscoverySource[]=(sourceResult.data??[]).map(row=>{const config=typeof row.config==='object'&&row.config!==null?row.config as Record<string,unknown>:{};return{id:row.id,name:row.name,kind:row.kind,baseUrl:row.base_url??undefined,enabled:row.enabled,monthlyLimit:Number(config.monthly_limit)||1,termsReviewedAt:typeof config.terms_reviewed_at==='string'?config.terms_reviewed_at:undefined,storageRightsConfirmedAt:typeof config.storage_rights_confirmed_at==='string'?config.storage_rights_confirmed_at:undefined}})
-  return { leads, notifications, runs, sources, profile: profile ? { name: profile.display_name || user.email?.split('@')[0] || 'User', role: profile.headline || '', skills: profile.skills ?? [], services: profile.services ?? [], markets: profile.markets ?? [], portfolioLinks:profile.portfolio_links??[], experienceSummary:profile.experience_summary??'', notificationThreshold:profile.notification_threshold??65,emailNotificationsEnabled:profile.email_notifications_enabled??false } : { name: user.email?.split('@')[0] || 'User', role: '', skills: [], services: [], markets: [], portfolioLinks:[], experienceSummary:'', notificationThreshold:65,emailNotificationsEnabled:false } }
+  const role=roleResult.data?.role
+  return { leads, notifications, runs, sources, role:role==='admin'||role==='super_admin'?role:'user', profile: profile ? { name: profile.display_name || user.email?.split('@')[0] || 'User', role: profile.headline || '', skills: profile.skills ?? [], services: profile.services ?? [], markets: profile.markets ?? [], portfolioLinks:profile.portfolio_links??[], experienceSummary:profile.experience_summary??'', notificationThreshold:profile.notification_threshold??65,emailNotificationsEnabled:profile.email_notifications_enabled??false } : { name: user.email?.split('@')[0] || 'User', role: '', skills: [], services: [], markets: [], portfolioLinks:[], experienceSummary:'', notificationThreshold:65,emailNotificationsEnabled:false } }
 }
 
 export async function saveCloudDiscoverySource(user:User,source:DiscoverySource){
@@ -129,4 +132,33 @@ export async function dismissCloudNotification(user:User,id:string) {
   if(!supabase)return
   const {error}=await supabase.from('notifications').delete().eq('owner_id',user.id).eq('id',id)
   if(error)throw error
+}
+
+export interface AdminOperationsData {
+  sources: { id:string; name:string; enabled:boolean; owner_id:string|null; kind:string; created_at:string }[]
+  runs: { id:string; owner_id:string; query:string; status:string; result_count:number; created_at:string; error_summary:string|null }[]
+  outbox: { id:string; owner_id:string; status:string; attempts:number; last_error_code:string|null; created_at:string; next_attempt_at:string; sent_at:string|null }[]
+  audit: { id:string; actor_id:string|null; action:string; entity_type:string; entity_id:string|null; created_at:string }[]
+}
+
+export async function loadAdminOperations(_user:User):Promise<AdminOperationsData|null>{
+  if(!supabase)throw new Error('Cloud mode is not configured.')
+  const {data:allowed,error:roleError}=await supabase.rpc('is_admin')
+  if(roleError)throw roleError
+  if(!allowed)return null
+  const [sources,runs,outbox,audit]=await Promise.all([
+    supabase.from('discovery_sources').select('id,name,enabled,owner_id,kind,created_at').order('created_at',{ascending:false}).limit(50),
+    supabase.from('search_runs').select('id,owner_id,query,status,result_count,created_at,error_summary').order('created_at',{ascending:false}).limit(50),
+    supabase.from('outbox').select('id,owner_id,status,attempts,last_error_code,created_at,next_attempt_at,sent_at').order('created_at',{ascending:false}).limit(50),
+    supabase.from('audit_logs').select('id,actor_id,action,entity_type,entity_id,created_at').order('created_at',{ascending:false}).limit(50),
+  ])
+  for(const result of [sources,runs,outbox,audit])if(result.error)throw result.error
+  return {sources:sources.data??[],runs:runs.data??[],outbox:outbox.data??[],audit:audit.data??[]}
+}
+
+export async function requeueFailedNotification(id:string){
+  if(!supabase)throw new Error('Cloud mode is not configured.')
+  const {data,error}=await supabase.rpc('admin_retry_notification_outbox',{p_id:id})
+  if(error)throw error
+  return data
 }

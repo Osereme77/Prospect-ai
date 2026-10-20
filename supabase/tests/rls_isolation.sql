@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select extensions.plan(11);
+select extensions.plan(12);
 
 insert into auth.users (
   instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -42,6 +42,10 @@ select extensions.throws_ok(
 select extensions.throws_ok(
   $$update public.user_roles set role='super_admin' where user_id='b2222222-2222-4222-8222-222222222222'$$,
   '42501',null,'ordinary users cannot grant themselves a privileged role'
+);
+select extensions.throws_ok(
+  $$select public.admin_retry_notification_outbox('d4444444-4444-4444-8444-444444444444')$$,
+  '42501',null,'ordinary users cannot retry notification delivery'
 );
 update public.leads set title='Changed by B' where id='c3333333-3333-4333-8333-333333333333';
 reset role;

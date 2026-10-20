@@ -1,0 +1,28 @@
+import { useEffect, useState } from 'react'
+import type { User } from '@supabase/supabase-js'
+import { Activity, RefreshCw, ShieldCheck } from 'lucide-react'
+import { loadAdminOperations, requeueFailedNotification, type AdminOperationsData } from './lib/repository'
+
+export default function AdminOperations({user,notify}:{user:User;notify:(message:string)=>void}){
+  const [data,setData]=useState<AdminOperationsData|null>(null)
+  const [loading,setLoading]=useState(true)
+  const [error,setError]=useState('')
+  const [refresh,setRefresh]=useState(0)
+  const [busy,setBusy]=useState('')
+  useEffect(()=>{
+    let active=true
+    setLoading(true);setError('')
+    loadAdminOperations(user).then(result=>{if(active)setData(result)}).catch(()=>{if(active)setError('Could not load operational data. Confirm the admin migration is applied and try again.')}).finally(()=>{if(active)setLoading(false)})
+    return()=>{active=false}
+  },[user.id,refresh])
+  async function retry(id:string){
+    setBusy(id)
+    try{const changed=await requeueFailedNotification(id);notify(changed?'Email job queued for retry.':'That job is no longer in the failed state.');setRefresh(value=>value+1)}
+    catch{notify('Could not retry that email job. Check the connection and admin permissions.')}
+    finally{setBusy('')}
+  }
+  if(loading)return <section className="panel admin-ops" aria-busy="true"><Activity/><h1>Operations</h1><p>Loading protected operational data…</p></section>
+  if(error)return <section className="panel admin-ops" role="alert"><h1>Operations</h1><p>{error}</p><button className="secondary" onClick={()=>setRefresh(value=>value+1)}>Retry loading</button></section>
+  if(!data)return <section className="panel admin-ops" role="status"><ShieldCheck/><h1>Admin access required</h1><p>This account does not have an administrative role.</p></section>
+  return <><small className="eyebrow">PRIVILEGED WORKSPACE</small><h1>Operations</h1><p className="subtitle">Review source activity, scheduled runs, email delivery, and audit events.</p><button className="secondary admin-refresh" onClick={()=>setRefresh(value=>value+1)}><RefreshCw size={15}/> Refresh operational data</button><div className="stats admin-stats">{[['Sources',data.sources.length],['Search runs',data.runs.length],['Queued email',data.outbox.filter(x=>x.status==='queued').length],['Failed email',data.outbox.filter(x=>x.status==='failed').length]].map(([label,value])=><div className="stat" key={String(label)}><span>{label}</span><Activity size={17}/><b>{value}</b><small>Latest 50 records where applicable</small></div>)}</div><section className="panel admin-panel"><h2>Notification delivery</h2><p>Manual retries keep the same notification and provider idempotency key.</p><div className="table-wrap"><table><thead><tr><th>STATUS</th><th>OWNER ID</th><th>ATTEMPTS</th><th>LAST ERROR</th><th>CREATED</th><th>ACTION</th></tr></thead><tbody>{data.outbox.length?data.outbox.map(item=><tr key={item.id}><td>{item.status}</td><td className="admin-id">{item.owner_id}</td><td>{item.attempts}</td><td>{item.last_error_code??'—'}</td><td>{new Date(item.created_at).toLocaleString()}</td><td>{item.status==='failed'&&<button className="secondary" disabled={busy===item.id} onClick={()=>void retry(item.id)}>{busy===item.id?'Queueing…':'Retry'}</button>}</td></tr>):<tr><td colSpan={6} className="empty">No email outbox records.</td></tr>}</tbody></table></div></section><div className="admin-grid"><section className="panel admin-panel"><h2>Discovery sources</h2><div className="table-wrap"><table><thead><tr><th>SOURCE</th><th>TYPE</th><th>OWNER ID</th><th>STATE</th></tr></thead><tbody>{data.sources.length?data.sources.map(source=><tr key={source.id}><td>{source.name}</td><td>{source.kind}</td><td className="admin-id">{source.owner_id??'Global'}</td><td>{source.enabled?'Enabled':'Disabled'}</td></tr>):<tr><td colSpan={4} className="empty">No configured sources.</td></tr>}</tbody></table></div></section><section className="panel admin-panel"><h2>Recent search runs</h2><div className="table-wrap"><table><thead><tr><th>STATUS</th><th>QUERY</th><th>RESULTS</th><th>CREATED</th></tr></thead><tbody>{data.runs.length?data.runs.map(run=><tr key={run.id}><td>{run.status}</td><td>{run.query.slice(0,100)}</td><td>{run.result_count}</td><td>{new Date(run.created_at).toLocaleString()}</td></tr>):<tr><td colSpan={4} className="empty">No search runs.</td></tr>}</tbody></table></div></section></div><section className="panel admin-panel"><h2>Audit events</h2><p>Recent administrative actions. Credentials and token values are excluded.</p><div className="table-wrap"><table><thead><tr><th>ACTION</th><th>ENTITY</th><th>ID</th><th>ACTOR</th><th>TIME</th></tr></thead><tbody>{data.audit.length?data.audit.map(item=><tr key={item.id}><td>{item.action}</td><td>{item.entity_type}</td><td className="admin-id">{item.entity_id??'—'}</td><td className="admin-id">{item.actor_id??'System'}</td><td>{new Date(item.created_at).toLocaleString()}</td></tr>):<tr><td colSpan={5} className="empty">No audit events recorded.</td></tr>}</tbody></table></div></section></>
+}

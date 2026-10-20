@@ -74,6 +74,7 @@ export type Database = {
     Views: Record<string, never>
     Functions: {
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
+      admin_retry_notification_outbox: { Args: { p_id: string }; Returns: boolean }
       reserve_discovery_slot: { Args: { p_owner: string; p_run_id: string; p_monthly_limit: number }; Returns: boolean }
     }
     Enums: {
