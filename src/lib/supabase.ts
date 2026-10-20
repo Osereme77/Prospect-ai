@@ -1,17 +1,22 @@
 import { createClient } from '@supabase/supabase-js'
 
+// The schema is maintained in supabase/migrations. Keep a local escape hatch
+// until Supabase CLI can generate database.types.ts from a provisioned project;
+// untyped clients otherwise infer every table as `never` and prevent builds.
+type LocalDatabase = any
+
 const url = import.meta.env.VITE_SUPABASE_URL?.trim()
 const anonKey = import.meta.env.VITE_SUPABASE_ANON_KEY?.trim()
 
 export const supabaseConfigured = Boolean(url && anonKey)
-let client: ReturnType<typeof createClient> | null = null
+let client: ReturnType<typeof createClient<LocalDatabase>> | null = null
 let initializationError = ''
 if (supabaseConfigured) {
   try {
     const parsed = new URL(url!)
     const localHost = ['localhost','127.0.0.1','::1'].includes(parsed.hostname.toLowerCase())
     if (parsed.protocol !== 'https:' && !(localHost && parsed.protocol === 'http:')) throw new Error('Supabase must use HTTPS (HTTP is allowed for local development only).')
-    client = createClient(url!, anonKey!, { auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true } })
+    client = createClient<LocalDatabase>(url!, anonKey!, { auth: { autoRefreshToken: true, persistSession: true, detectSessionInUrl: true } })
   } catch (cause) { initializationError = cause instanceof Error ? cause.message : 'Supabase configuration is invalid.' }
 }
 export const supabase = client

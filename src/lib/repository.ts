@@ -86,7 +86,7 @@ export async function saveCloudWorkspace(user: User, leads: Lead[], profile?: Pr
   })), { onConflict: 'id' })
   if (leadError) throw leadError
   const evidence = leads.flatMap(lead => {
-    const items=lead.evidenceDetails?.length?lead.evidenceDetails:lead.evidence.filter(claim=>Boolean(lead.url)).map(claim=>({claim,sourceUrl:lead.url,observedAt:lead.createdAt,type:'public_page' as const,status:'unverified' as const}))
+    const items: EvidenceItem[] = lead.evidenceDetails?.length ? lead.evidenceDetails : lead.url ? lead.evidence.filter(Boolean).map(claim=>({claim,sourceUrl:lead.url,observedAt:lead.createdAt,type:'public_page',status:'unverified'})) : []
     return items.map(item=>({lead_id:lead.id,owner_id:user.id,source_url:item.sourceUrl,claim:item.claim,observed_at:item.observedAt,evidence_type:item.type,verification_status:item.status,reviewed_at:item.reviewedAt??null}))
   })
   if (evidence.length) {
