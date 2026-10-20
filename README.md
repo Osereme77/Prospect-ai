@@ -6,6 +6,7 @@ Remy Prospect AI is a personal, evidence-led workspace for finding and managing 
 
 - Responsive overview, opportunities, companies, research, notifications, and settings screens.
 - Manually add opportunities or companies with public source URLs, notes, evidence labels, tags, location, and pipeline status.
+- Review a bounded public-page excerpt locally to extract unverified need, budget, and timing observations; show missing fields explicitly and keep the excerpt out of AI services.
 - Search and filter the pipeline by status, score, and location; export filtered records as CSV; inspect evidence and score rationale; and keep private notes and follow-up dates.
 - Edit skills, services, target markets, portfolio links, experience summary, and the notification threshold. Browser mode persists the profile in local storage; Supabase mode syncs it to the account profile.
 - Supabase PostgreSQL migration for profiles, roles, sources, runs, leads, evidence, explainable score history, notifications, email outbox, and audit logs with row-level security.
@@ -13,7 +14,7 @@ Remy Prospect AI is a personal, evidence-led workspace for finding and managing 
 
 **Sample records are illustrative synthetic examples.** Their `example.com` URLs are placeholders, not real opportunities. Replace or remove them before making decisions based on the data.
 
-Automated search, external AI research, scheduled jobs, authentication, and email delivery are not live until their server-side services and secrets are configured. The app calls this out in the UI; it does not claim to have run discovery. There is no automatic job application or unsolicited outreach.
+Automated search, remote page fetching, external AI research, scheduled jobs, authentication, and email delivery are not live until their server-side services and secrets are configured. The app calls this out in the UI; it does not claim to have run discovery. There is no automatic job application or unsolicited outreach.
 
 ## Run locally
 
