@@ -15,7 +15,7 @@ flowchart LR
   Web -.->|No cloud config| Local[(Browser local storage)]
 ```
 
-The browser contains only the Supabase public URL and anon/publishable key. Provider credentials and any service-role credentials stay in managed server-side secrets. The discovery function checks the user session, validates request bounds, reserves a per-user monthly quota, filters returned URLs, and records run state. It does not fetch result pages or submit applications.
+The browser contains only the Supabase public URL and anon/publishable key. Provider credentials and any service-role credentials stay in managed server-side secrets. The discovery function checks the user session, requires owner terms and storage-rights consent plus a separate operator storage-rights flag, validates request bounds, reserves the lower per-user/global monthly quota, filters returned URLs, and records source/run attribution. Removing the source deletes its stored result leads and linked evidence, scores, and notifications. It does not fetch result pages or submit applications.
 
 ## Data model
 
@@ -49,7 +49,7 @@ The repository has no connected cloud project, hosting environment, or secret st
 
 ## Deferred boundaries
 
-- Discovery is manual and Brave-only today. A source registry interface, scheduled job, independent-source retries, and admin source controls are not implemented.
+- Discovery is manual and Brave-only today. Owner source approval, plan storage-rights confirmation, request caps, and source-result deletion are implemented. Scheduled jobs, independent-source retries, and admin source controls are not.
 - Research uses deterministic scoring and human evidence review. Page-fetching research and AI summaries are disabled.
 - The email outbox is schema only. Provider selection, sender verification, retry worker, destination preferences, and delivery monitoring remain open.
 - Admin roles and an `is_admin()` database helper exist, but no admin-facing controls or role-bootstrap operation are exposed to ordinary users.

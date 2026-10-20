@@ -8,6 +8,7 @@ import { normalizeBraveResults } from '../supabase/functions/_shared/discovery.t
 import { buildSuggestedQuery } from '../src/lib/query.ts'
 import { createEvidenceItem, scoreEvidenceChanges, setEvidenceReview } from '../src/lib/evidence.ts'
 import { countFollowUpsDue, isFollowUpDue } from '../src/lib/followups.ts'
+import { effectiveSourceRequestLimit } from '../supabase/functions/_shared/sourcePolicy.ts'
 
 test('score uses the documented weights and rounds to an integer', () => {
   assert.equal(calculateScore({ relevance: 100, needEvidence: 80, budgetSignals: 50, freshness: 60, sourceConfidence: 90 }), 81)
@@ -106,4 +107,16 @@ test('follow-up metrics count only valid due dates on open leads', () => {
   assert.equal(isFollowUpDue({followUp:'2026-10-19',status:'Won'},now),false)
   assert.equal(isFollowUpDue({followUp:'2026-02-30',status:'New'},now),false)
   assert.equal(countFollowUpsDue([filterSample({followUp:'2026-10-19'}),filterSample({id:'future',followUp:'2026-10-25'}),filterSample({id:'closed',followUp:'2026-10-19',status:'Lost'})],now),1)
+})
+
+test('source approval requires enabled consent and enforces the lower monthly cap', () => {
+  const config={monthly_limit:7,terms_reviewed_at:'2026-10-20T10:00:00.000Z',storage_rights_confirmed_at:'2026-10-20T10:00:00.000Z'}
+  const now=Date.parse('2026-10-20T12:00:00.000Z')
+  assert.equal(effectiveSourceRequestLimit(true,config,20,now),7)
+  assert.equal(effectiveSourceRequestLimit(true,config,3,now),3)
+  assert.equal(effectiveSourceRequestLimit(false,config,20,now),null)
+  assert.equal(effectiveSourceRequestLimit(true,{...config,terms_reviewed_at:'invalid'},20,now),null)
+  assert.equal(effectiveSourceRequestLimit(true,{...config,terms_reviewed_at:'2026-10-21T00:00:00.000Z'},20,now),null)
+  assert.equal(effectiveSourceRequestLimit(true,{...config,monthly_limit:0},20,now),null)
+  assert.equal(effectiveSourceRequestLimit(true,{monthly_limit:7,terms_reviewed_at:config.terms_reviewed_at},20,now),null)
 })

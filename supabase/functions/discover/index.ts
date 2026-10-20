@@ -3,6 +3,7 @@
 // Configure: supabase secrets set BRAVE_SEARCH_API_KEY=...
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import { BraveSearchProvider } from '../_shared/discovery.ts'
+import { effectiveSourceRequestLimit } from '../_shared/sourcePolicy.ts'
 
 const provider = new BraveSearchProvider()
 
@@ -35,13 +36,20 @@ Deno.serve(async request => {
   const count = typeof payload.count === 'number' && Number.isInteger(payload.count) ? Math.min(20, Math.max(1, payload.count)) : 10
   const apiKey = Deno.env.get('BRAVE_SEARCH_API_KEY')
   const enabled = Deno.env.get('BRAVE_SEARCH_ENABLED') === 'true'
+  const storageRightsConfirmed = Deno.env.get('BRAVE_SEARCH_STORAGE_RIGHTS_CONFIRMED') === 'true'
   const monthlyLimit = Number.parseInt(Deno.env.get('BRAVE_SEARCH_MONTHLY_LIMIT') ?? '', 10)
-  if (!enabled || !apiKey || !Number.isSafeInteger(monthlyLimit) || monthlyLimit < 1) return json({ error: 'provider_not_configured_or_disabled' }, 503)
+  if (!enabled || !storageRightsConfirmed || !apiKey || !Number.isSafeInteger(monthlyLimit) || monthlyLimit < 1) return json({ error: 'provider_not_configured_or_disabled' }, 503)
+
+  const { data: source, error: sourceError } = await supabase.from('discovery_sources')
+    .select('id,enabled,config').eq('owner_id',user.id).eq('kind','search_api').eq('name',provider.name).maybeSingle()
+  if (sourceError) return json({ error: 'source_registry_unavailable' }, 503)
+  const effectiveLimit = effectiveSourceRequestLimit(Boolean(source?.enabled), source?.config, monthlyLimit)
+  if (effectiveLimit === null) return json({ error: 'source_not_approved_by_owner' }, 403)
 
   const idempotencyKey = request.headers.get('Idempotency-Key')?.slice(0, 120) || crypto.randomUUID()
-  const { data: run, error: runError } = await supabase.from('search_runs').insert({ owner_id: user.id, query, status: 'queued', idempotency_key: idempotencyKey }).select('id').single()
+  const { data: run, error: runError } = await supabase.from('search_runs').insert({ owner_id: user.id, source_id:source.id, query, status: 'queued', idempotency_key: idempotencyKey }).select('id').single()
   if (runError) return json({ error: runError.code === '23505' ? 'duplicate_request' : 'run_creation_failed' }, runError.code === '23505' ? 409 : 500)
-  const { data: allowed, error: limitError } = await supabase.rpc('reserve_discovery_slot', { p_owner: user.id, p_run_id: run.id, p_monthly_limit: monthlyLimit })
+  const { data: allowed, error: limitError } = await supabase.rpc('reserve_discovery_slot', { p_owner: user.id, p_run_id: run.id, p_monthly_limit: effectiveLimit })
   if (limitError) {
     await supabase.from('search_runs').update({ status: 'failed', error_code: 'quota_check_failed', finished_at: new Date().toISOString() }).eq('id', run.id).eq('owner_id', user.id)
     return json({ error: 'quota_check_failed', run_id: run.id }, 503)
@@ -54,7 +62,7 @@ Deno.serve(async request => {
   try {
     const normalized = await provider.search({ query, country, count }, apiKey)
     await supabase.from('search_runs').update({ status: 'completed', result_count: normalized.length, finished_at: new Date().toISOString() }).eq('id', run.id).eq('owner_id', user.id)
-    return json({ run_id: run.id, results: normalized })
+    return json({ run_id: run.id, source_id:source.id, results: normalized })
   } catch (error) {
     const code = error instanceof Error ? error.message.slice(0, 80) : 'provider_error'
     await supabase.from('search_runs').update({ status: 'failed', error_code: 'provider_error', error_summary: code, finished_at: new Date().toISOString() }).eq('id', run.id).eq('owner_id', user.id)

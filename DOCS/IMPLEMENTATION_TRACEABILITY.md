@@ -17,7 +17,7 @@ The PDF PRD remains the product authority. This matrix links its MVP requirement
 | Persistent in-app and optional email notifications | Local/cloud notifications, unread count, mark-read, dismiss, threshold preference, and lead-match alerts; `notifications` and `outbox` tables. | Verify alert thresholds and RLS in a deployed project; implement verified-destination email worker, retry delivery, channel independence, and preferences. |
 | Admin source/run/usage/audit controls | Roles and audit/outbox schema only | Admin UI, privileged Edge Function checks, run controls, audit event writing, and operational alerting. |
 | No automatic applications or unsolicited outreach | No submission or messaging action exists in the UI or functions | Regression review before release. |
-| Free-first, no surprise provider charges | Search disabled by default; monthly limit must be configured; account must opt in by setting `BRAVE_SEARCH_ENABLED=true` | Verify current provider terms/pricing and quota behavior before setting any provider secret or enabling searches. |
+| Free-first, no surprise provider charges and permitted result retention | Search disabled by default; account source approval, monthly cap, terms review, and storage-rights confirmation are required in addition to the server API key, enable flag, storage-rights flag, and global cap. | Verify the owner's actual provider plan grants result storage rights; test quotas and source-result deletion before use. |
 | Deployable alpha/beta/MVP | Setup instructions and a GitHub Actions quality workflow | Real environment secrets, migration/function deployment, hosting, backups, rollback, alpha/beta evidence, and release approval. |
 
 ## Known risks and controls
