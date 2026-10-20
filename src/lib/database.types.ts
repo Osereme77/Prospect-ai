@@ -20,6 +20,7 @@ type Lead = {
   budget_signal: string | null; follow_up_at: string | null; notes: string; duplicate_of: string | null
   source_label: string; tags: string[]; posted_label: string; score: number; score_reason: string
   search_run_id: string | null; source_id: string | null; discovered_at: string | null; research_gaps: string[]
+  contact_availability: 'unknown' | 'public_channel' | 'not_found'
   created_at: string; updated_at: string
 }
 
@@ -46,8 +47,8 @@ export type Database = {
       discovery_reservations: Table<{ run_id: string; owner_id: string; reserved_at: string }, { run_id: string; owner_id: string; reserved_at?: string }>
       leads: Table<
         Lead,
-        { id?: string; owner_id: string; kind: Lead['kind']; title: string; organization: string; source_url?: string | null; location?: string | null; summary?: string; status?: Lead['status']; budget_signal?: string | null; follow_up_at?: string | null; notes?: string; duplicate_of?: string | null; source_label?: string; tags?: string[]; posted_label?: string; score?: number; score_reason?: string; search_run_id?: string | null; source_id?: string | null; discovered_at?: string | null; research_gaps?: string[]; created_at?: string; updated_at?: string },
-        { id?: string; owner_id?: string; kind?: Lead['kind']; title?: string; organization?: string; source_url?: string | null; location?: string | null; summary?: string; status?: Lead['status']; budget_signal?: string | null; follow_up_at?: string | null; notes?: string; duplicate_of?: string | null; source_label?: string; tags?: string[]; posted_label?: string; score?: number; score_reason?: string; search_run_id?: string | null; source_id?: string | null; discovered_at?: string | null; research_gaps?: string[]; updated_at?: string },
+        { id?: string; owner_id: string; kind: Lead['kind']; title: string; organization: string; source_url?: string | null; location?: string | null; summary?: string; status?: Lead['status']; budget_signal?: string | null; contact_availability?: Lead['contact_availability']; follow_up_at?: string | null; notes?: string; duplicate_of?: string | null; source_label?: string; tags?: string[]; posted_label?: string; score?: number; score_reason?: string; search_run_id?: string | null; source_id?: string | null; discovered_at?: string | null; research_gaps?: string[]; created_at?: string; updated_at?: string },
+        { id?: string; owner_id?: string; kind?: Lead['kind']; title?: string; organization?: string; source_url?: string | null; location?: string | null; summary?: string; status?: Lead['status']; budget_signal?: string | null; contact_availability?: Lead['contact_availability']; follow_up_at?: string | null; notes?: string; duplicate_of?: string | null; source_label?: string; tags?: string[]; posted_label?: string; score?: number; score_reason?: string; search_run_id?: string | null; source_id?: string | null; discovered_at?: string | null; research_gaps?: string[]; updated_at?: string },
         [Relation<'leads_duplicate_of_fkey', ['duplicate_of'], 'leads', ['id']>, Relation<'leads_search_run_id_fkey', ['search_run_id'], 'search_runs', ['id']>, Relation<'leads_source_id_fkey', ['source_id'], 'discovery_sources', ['id']>]
       >
       lead_evidence: Table<

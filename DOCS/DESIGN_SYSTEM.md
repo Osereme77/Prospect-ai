@@ -8,15 +8,16 @@ This is the implementation reference for the current React workspace. It records
 | --- | --- | --- |
 | Canvas | `#f7f8fb` | Main page background |
 | Text | `#252536` | Default body text |
+| Muted text | `#6b6c79` | Supporting text on white and canvas surfaces |
 | Primary action | `#6653b5` | Main buttons and links |
 | Primary hover | `#5946a4` | Hover state for primary actions |
 | Focus ring | `#9b88e8` | Visible keyboard focus |
 | Divider | `#ececf2` | Borders and table rules |
-| Success | `#45936c` | Positive score and delivered states |
-| Caution | `#b18348` | Low score and uncertainty cues |
+| Success | `#28724f` | Positive score and delivered states |
+| Caution | `#78541e` | Low score and uncertainty cues |
 | Type | `Inter`, system UI fallback | Application typography |
 
-Spacing is built from a compact 4/8 px rhythm. Cards use 8–10 px corners, controls use 6–7 px corners, and content width caps at 1420 px. These values are documented as the current baseline; convert remaining repeated CSS literals to variables as screen work evolves.
+The shared token layer lives in `src/styles/tokens.css`. It defines semantic color, spacing, radius, elevation, focus, motion, and layout variables; core surfaces, navigation, buttons, score states, and focus outlines consume those tokens. A unit check enforces 4.5:1 contrast for the semantic normal-text color pairs. Spacing follows a compact 4/8 px rhythm. Cards use 8–10 px corners, controls use 6–7 px corners, and content width caps at 1420 px. Some legacy component-specific values remain literal and should be converted when those components are next revised.
 
 ## Layout and responsive rules
 

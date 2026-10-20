@@ -1,4 +1,4 @@
-import type { AppNotification, Lead, LeadStatus } from '../types'
+import type { AppNotification, ContactAvailability, Lead, LeadStatus } from '../types'
 
 export interface LeadFilters {
   query?: string
@@ -8,6 +8,7 @@ export interface LeadFilters {
   source?: string
   service?: string
   budget?: 'known' | 'unknown' | ''
+  contactAvailability?: ContactAvailability | ''
   withinDays?: number
   unreadOnly?: boolean
 }
@@ -30,6 +31,7 @@ export function filterLeads(leads: Lead[], filters: LeadFilters, notifications: 
     if (service && !lead.tags.some(tag => normalize(tag) === service)) return false
     if (filters.budget === 'known' && !budgetIsKnown(lead.budget)) return false
     if (filters.budget === 'unknown' && budgetIsKnown(lead.budget)) return false
+    if (filters.contactAvailability && (lead.contactAvailability ?? 'unknown') !== filters.contactAvailability) return false
     if (cutoff && Date.parse(lead.createdAt) < cutoff) return false
     if (filters.unreadOnly && !unreadIds.has(lead.id)) return false
     return true

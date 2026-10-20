@@ -37,6 +37,7 @@ export async function loadCloudWorkspace(user: User): Promise<{ leads: Lead[]; p
       sourceId:row.source_id??undefined, searchRunId:row.search_run_id??undefined,
       tags: row.tags ?? [], evidence, evidenceDetails, budget: row.budget_signal ?? undefined, followUp: safeDate(row.follow_up_at),
       researchGaps: row.research_gaps ?? [],
+      contactAvailability: row.contact_availability ?? 'unknown',
       notes: row.notes ?? '', createdAt: row.created_at,
       scoreBreakdown: scoreRow ? { relevance:scoreRow.relevance, needEvidence:scoreRow.need_evidence, budgetSignals:scoreRow.budget_signals, freshness:scoreRow.freshness, sourceConfidence:scoreRow.source_confidence } : undefined,
       duplicateOf:row.duplicate_of??undefined,
@@ -84,7 +85,7 @@ export async function saveCloudWorkspace(user: User, leads: Lead[], profile?: Pr
   const { error: leadError } = await supabase.from('leads').upsert(leads.map(lead => ({
     id: lead.id, owner_id: user.id, kind: lead.kind.toLowerCase() as 'company'|'opportunity', title: lead.title, organization: lead.organization,
     source_url: lead.url || null, location: lead.location || null, summary: lead.summary, status: dbStatus(lead.status),
-    budget_signal: lead.budget ?? null, follow_up_at: lead.followUp ?? null, notes: lead.notes ?? '', duplicate_of:lead.duplicateOf??null,
+    budget_signal: lead.budget ?? null, contact_availability: lead.contactAvailability ?? 'unknown', follow_up_at: lead.followUp ?? null, notes: lead.notes ?? '', duplicate_of:lead.duplicateOf??null,
     source_label: lead.source, source_id:lead.sourceId??null, search_run_id:lead.searchRunId??null, tags: lead.tags, research_gaps:lead.researchGaps??[], posted_label: lead.postedAt, score: lead.score, score_reason: lead.scoreReason,
     updated_at: new Date().toISOString(),
   })), { onConflict: 'id' })

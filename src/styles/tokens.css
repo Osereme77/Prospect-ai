@@ -1,0 +1,212 @@
+:root {
+  color-scheme: light;
+
+  /* Semantic color tokens */
+  --color-canvas: #f7f8fb;
+  --color-surface: #ffffff;
+  --color-surface-muted: #fcfcfd;
+  --color-text: #252536;
+  --color-text-strong: #3d3c4d;
+  --color-text-muted: #6b6c79;
+  --color-text-subtle: #6b6c79;
+  --color-primary: #6653b5;
+  --color-primary-hover: #5946a4;
+  --color-primary-soft: #f0edfa;
+  --color-success: #28724f;
+  --color-success-soft: #edf7f1;
+  --color-caution: #78541e;
+  --color-caution-soft: #fff5e8;
+  --color-danger: #a34c45;
+  --color-danger-soft: #fff0ef;
+  --color-border: #ececf2;
+  --color-border-strong: #e4e3ec;
+  --color-focus: #9b88e8;
+
+  /* Spacing, shape, and elevation tokens */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --space-8: 32px;
+  --radius-control: 7px;
+  --radius-card: 10px;
+  --radius-dialog: 12px;
+  --shadow-control: 0 2px 3px #44358624;
+  --shadow-dialog: 0 18px 60px #24203d33;
+
+  /* Layout and motion tokens */
+  --layout-nav-width: 252px;
+  --layout-content-max: 1420px;
+  --motion-fast: 160ms;
+  --focus-outline: 3px solid var(--color-focus);
+
+  /* Compatibility aliases used by the original stylesheet. */
+  --line: var(--color-border);
+  --purple: var(--color-primary);
+}
+
+body {
+  color: var(--color-text);
+  background: var(--color-canvas);
+}
+
+p,
+.welcome p,
+.subtitle,
+.page-heading p {
+  color: var(--color-text-muted);
+}
+
+.sidebar,
+.topbar,
+.table-wrap,
+.panel,
+.stat,
+.modal,
+.detail {
+  background-color: var(--color-surface);
+  border-color: var(--color-border);
+}
+
+.content {
+  max-width: var(--layout-content-max);
+}
+
+.sidebar {
+  width: var(--layout-nav-width);
+}
+
+.main,
+main {
+  margin-left: var(--layout-nav-width);
+}
+
+main.auth-screen {
+  margin-left: 0;
+}
+
+.primary {
+  color: var(--color-surface);
+  background-color: var(--color-primary);
+  border-color: var(--color-primary);
+  border-radius: var(--radius-control);
+  box-shadow: var(--shadow-control);
+}
+
+.primary:hover {
+  background-color: var(--color-primary-hover);
+}
+
+.secondary {
+  border-color: var(--color-border-strong);
+  border-radius: var(--radius-control);
+}
+
+.panel,
+.stat {
+  border-radius: var(--radius-card);
+}
+
+.bottom-grid {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.stats {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.source-health {
+  margin: var(--space-3) 0 var(--space-1);
+  color: var(--color-text-strong);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.source-health-time {
+  display: block;
+  margin-bottom: var(--space-2);
+  color: var(--color-text-muted);
+  overflow-wrap: anywhere;
+}
+
+.modal,
+.detail {
+  border-radius: var(--radius-dialog);
+  box-shadow: var(--shadow-dialog);
+}
+
+.nav-item.active {
+  color: var(--color-primary-hover);
+  background-color: var(--color-primary-soft);
+}
+
+.score.good,
+.run-completed,
+.evidence-reviewed {
+  color: var(--color-success);
+  background-color: var(--color-success-soft);
+}
+
+.score.low,
+.run-running,
+.run-queued,
+.evidence-status {
+  color: var(--color-caution);
+  background-color: var(--color-caution-soft);
+}
+
+.run-failed,
+.run-cancelled {
+  color: var(--color-danger);
+  background-color: var(--color-danger-soft);
+}
+
+button:focus-visible,
+a:focus-visible,
+select:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: var(--focus-outline);
+  outline-offset: 2px;
+}
+
+@media (max-width: 1050px) {
+  :root {
+    --layout-nav-width: 225px;
+  }
+
+  .bottom-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 760px) {
+  :root {
+    --layout-nav-width: 0px;
+  }
+
+  .sidebar {
+    width: 260px;
+    transition: transform var(--motion-fast) ease;
+  }
+
+  .bottom-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

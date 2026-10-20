@@ -80,6 +80,17 @@ test('lead filters support recent records and unread notifications', () => {
   assert.deepEqual(filterLeads(leads,{unreadOnly:true},[{...notices[0],readAt:'2026-10-20T01:00:00.000Z'}]).map(x=>x.id),[])
 })
 
+test('contact availability filters distinguish unknown, public channel, and not found', () => {
+  const leads = [
+    filterSample({ id: 'unknown', contactAvailability: undefined }),
+    filterSample({ id: 'public', contactAvailability: 'public_channel' }),
+    filterSample({ id: 'not-found', contactAvailability: 'not_found' }),
+  ]
+  assert.deepEqual(filterLeads(leads, { contactAvailability: 'unknown' }).map(lead => lead.id), ['unknown'])
+  assert.deepEqual(filterLeads(leads, { contactAvailability: 'public_channel' }).map(lead => lead.id), ['public'])
+  assert.deepEqual(filterLeads(leads, { contactAvailability: 'not_found' }).map(lead => lead.id), ['not-found'])
+})
+
 test('Brave adapter normalizes bounded evidence and filters unsafe result URLs', () => {
   const results = normalizeBraveResults({web:{results:[
     {title:'A'.repeat(400),url:'https://example.com/job?utm_source=test',description:'B'.repeat(2000)},

@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select extensions.plan(20);
+select extensions.plan(24);
 
 insert into auth.users (
   instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -22,9 +22,24 @@ insert into public.search_runs(id,owner_id,query,idempotency_key) values
 insert into public.leads(id,owner_id,kind,title,organization)
 values ('c3333333-3333-4333-8333-333333333333','a1111111-1111-4111-8111-111111111111','opportunity','Owner A lead','Example');
 
+set local role anon;
+select extensions.throws_ok(
+  $$select * from public.leads$$,
+  '42501',null,'anonymous requests cannot read private leads'
+);
+select extensions.throws_ok(
+  $$select public.reserve_discovery_slot('a1111111-1111-4111-8111-111111111111','e1111111-1111-4111-8111-111111111111',100,100)$$,
+  '42501',null,'anonymous requests cannot reserve discovery quota'
+);
+reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a1111111-1111-4111-8111-111111111111',true);
 select extensions.is((select count(*)::integer from public.leads),1,'owner A can read their lead');
+select extensions.is((select contact_availability from public.leads where id='c3333333-3333-4333-8333-333333333333'),'unknown','new leads default contact availability to unknown');
+select extensions.throws_ok(
+  $$update public.leads set contact_availability='private_details' where id='c3333333-3333-4333-8333-333333333333'$$,
+  '23514',null,'contact availability accepts only the documented states'
+);
 update public.profiles set email_notifications_enabled=true where id='a1111111-1111-4111-8111-111111111111';
 insert into public.notifications(owner_id,lead_id,kind,title,body,idempotency_key)
 values ('a1111111-1111-4111-8111-111111111111','c3333333-3333-4333-8333-333333333333','lead_match','Strong fit','Review this prospect','email-test/a');

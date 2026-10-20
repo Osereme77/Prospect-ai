@@ -14,7 +14,7 @@ Remy Prospect AI is a personal, evidence-led workspace for finding and managing 
 
 **Sample records are illustrative synthetic examples.** Their `example.com` URLs are placeholders, not real opportunities. Replace or remove them before making decisions based on the data.
 
-Automated search, remote page fetching, external AI research, scheduled jobs, authentication, and email delivery are not live until their server-side services and secrets are configured. The app calls this out in the UI; it does not claim to have run discovery. There is no automatic job application or unsolicited outreach.
+Supabase Auth and cloud sync are implemented for configured projects; the Auth email and redirect settings still need to be checked for each environment. Automated search remains disabled until provider rights, cost, and server-side settings are approved. Remote page fetching, external AI research, scheduled jobs, and email delivery are not active. The app does not claim to have run discovery. There is no automatic job application or unsolicited outreach.
 
 ## Run locally
 
@@ -65,6 +65,7 @@ npm run build
 See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for the phased delivery plan and [DOCS/PROSPECT PRD.pdf](DOCS/PROSPECT%20PRD.pdf) for the full product requirements.
 See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for what is implemented and which account-specific setup steps remain.
 See [DOCS/ARCHITECTURE.md](DOCS/ARCHITECTURE.md) for the architecture diagram, data model, environment boundaries, and deferred integrations.
+See [DOCS/UX_FLOWS.md](DOCS/UX_FLOWS.md) for the main journeys, low-fidelity layouts, and owner review checklist.
 
 ## Database security checks
 
