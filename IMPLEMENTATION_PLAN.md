@@ -1,9 +1,9 @@
 # Remy Prospect AI — Implementation Plan
 
-**Status:** Proposed  
+**Status:** Implementation in progress; see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for delivered code and open live-service gates.
 **Baseline:** Product Requirements Document v1.0  
 **Repository:** Prospect-ai, with implementation work on the ui-test branch  
-**Current state:** The repository contains the PRD and README; application code has not started.
+**Current state:** The core React/Supabase application, initial migrations, authenticated discovery function, documentation, and CI workflow are implemented on `ui-test`. Real cloud deployment and provider-backed acceptance checks remain open.
 
 ## 1. Objective and delivery principles
 
