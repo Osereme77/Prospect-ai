@@ -4,7 +4,7 @@ import { calculateScore, scoreLead } from '../src/lib/scoring.ts'
 import { canonicalPublicUrl } from '../src/lib/urls.ts'
 import { leadsToCsv } from '../src/lib/export.ts'
 import { filterLeads } from '../src/lib/filters.ts'
-import { normalizeBraveResults } from '../supabase/functions/_shared/discovery.ts'
+import { normalizeBraveResults, normalizeRemoteOkResults } from '../supabase/functions/_shared/discovery.ts'
 import { buildSuggestedQuery } from '../src/lib/query.ts'
 import { createEvidenceItem, scoreEvidenceChanges, setEvidenceReview } from '../src/lib/evidence.ts'
 import { countFollowUpsDue, isFollowUpDue } from '../src/lib/followups.ts'
@@ -106,6 +106,21 @@ test('Brave adapter normalizes bounded evidence and filters unsafe result URLs',
   assert.equal(results[0].url,'https://example.com/job?utm_source=test')
 })
 
+test('Remote OK feed drops metadata and unsafe URLs, filters locally, and bounds text', () => {
+  const results = normalizeRemoteOkResults([
+    {legal:'feed metadata'},
+    {id:1,position:'Senior React Engineer',company:'Acme',url:'https://remoteok.com/remote-jobs/1',tags:['React'],description:'<script>bad()</script><p>Remote role &amp; team</p>'},
+    {id:2,position:'Private role',company:'Acme',url:'https://example.com/job',tags:['React'],description:'React'},
+    {id:3,position:'Python developer',company:'Acme',url:'https://remoteok.com/remote-jobs/3',tags:['Python'],description:'Python'},
+  ], 'React', 10)
+  assert.equal(results.length,1)
+  assert.equal(results[0].title,'Senior React Engineer')
+  assert.equal(results[0].organization,'Acme')
+  assert.equal(results[0].source,'Remote OK')
+  assert.match(results[0].snippet,/Remote role & team/)
+  assert.doesNotMatch(results[0].snippet,/script|<p>/)
+})
+
 test('discovery query suggestions combine unique profile skills, services, and a target market', () => {
   assert.equal(buildSuggestedQuery(['React',' TypeScript ','react','Node.js','Python','Go'],['Web application development','AI automation','Extra service'],['Nigeria','Global']), 'React TypeScript Node.js Python Web application development AI automation Nigeria')
   assert.equal(buildSuggestedQuery(['  ',''],[],[]), '')
@@ -169,4 +184,5 @@ test('source approval keeps owner and provider-wide monthly caps separate', () =
   assert.equal(effectiveSourceRequestLimits(true,{...config,terms_reviewed_at:'2026-10-21T00:00:00.000Z'},20,now),null)
   assert.equal(effectiveSourceRequestLimits(true,{...config,monthly_limit:0},20,now),null)
   assert.equal(effectiveSourceRequestLimits(true,{monthly_limit:7,terms_reviewed_at:config.terms_reviewed_at},20,now),null)
+  assert.deepEqual(effectiveSourceRequestLimits(true,{monthly_limit:7,terms_reviewed_at:config.terms_reviewed_at},20,now,false),{ownerMonthlyLimit:7,globalMonthlyLimit:20})
 })

@@ -6,6 +6,7 @@ export interface DiscoveryRequest {
 
 export interface DiscoveryResult {
   title: string
+  organization?: string
   url: string
   snippet: string
   source: string
@@ -32,6 +33,43 @@ export class BraveSearchProvider implements DiscoveryProvider {
     if (!response.ok) throw new Error(`provider_http_${response.status}`)
     return normalizeBraveResults(await response.json())
   }
+}
+
+// Remote OK publishes a public JSON feed. The query is applied locally so the
+// user's profile and search terms are never sent to the feed provider.
+export class RemoteOkProvider {
+  readonly name = 'Remote OK'
+
+  async search(request: DiscoveryRequest): Promise<DiscoveryResult[]> {
+    const response = await fetch('https://remoteok.com/api', {
+      headers: { 'Accept': 'application/json', 'User-Agent': 'ProspectAI/1.0 (public job feed)' },
+      signal: AbortSignal.timeout(12000),
+    })
+    if (!response.ok) throw new Error(`provider_http_${response.status}`)
+    return normalizeRemoteOkResults(await response.json(), request.query, request.count)
+  }
+}
+
+export function normalizeRemoteOkResults(payload: unknown, query: string, count: number): DiscoveryResult[] {
+  if (!Array.isArray(payload)) return []
+  const terms = query.toLowerCase().split(/[^a-z0-9+#.]+/).filter(term => term.length > 2 && !['job','jobs','contract','freelance','opportunity'].includes(term))
+  return payload.flatMap((candidate: unknown) => {
+    if (!candidate || typeof candidate !== 'object') return []
+    const item = candidate as Record<string, unknown>
+    // The first feed item is metadata, not a job.
+    if (typeof item.id !== 'number' && typeof item.id !== 'string') return []
+    const rawUrl = typeof item.url === 'string' ? item.url : typeof item.apply_url === 'string' ? item.apply_url : ''
+    const url = safePublicUrl(rawUrl)
+    if (!url || new URL(url).hostname.replace(/^www\./, '') !== 'remoteok.com') return []
+    const title = typeof item.position === 'string' ? item.position.slice(0, 300) : 'Untitled remote role'
+    const company = typeof item.company === 'string' ? item.company.slice(0, 160) : ''
+    const tags = Array.isArray(item.tags) ? item.tags.filter((tag): tag is string => typeof tag === 'string').join(' ') : ''
+    const description = typeof item.description === 'string' ? item.description : ''
+    const snippet = description.replace(/<\s*(script|style)[^>]*>[\s\S]*?<\/\s*\1\s*>/gi, ' ').replace(/<[^>]*>/g, ' ').replace(/&nbsp;|&#160;/gi, ' ').replace(/&amp;/gi, '&').replace(/&lt;/gi, '<').replace(/&gt;/gi, '>').replace(/&quot;/gi, '"').replace(/&#39;|&apos;/gi, "'").replace(/\s+/g, ' ').trim().slice(0, 700)
+    const searchable = `${title} ${company} ${tags} ${snippet}`.toLowerCase()
+    if (terms.length && !terms.some(term => searchable.includes(term))) return []
+    return [{ title, organization: company || undefined, url, snippet, source: 'Remote OK' }]
+  }).slice(0, Math.min(20, Math.max(1, count)))
 }
 
 export function normalizeBraveResults(payload: unknown): DiscoveryResult[] {

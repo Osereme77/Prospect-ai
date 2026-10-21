@@ -3,7 +3,7 @@
 **Status:** Implementation in progress; see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for delivered code and open live-service gates.
 **Baseline:** Product Requirements Document v1.0  
 **Repository:** Prospect-ai, with implementation work on the ui-test branch  
-**Current state:** The core React/Supabase application, ten versioned migrations, authenticated discovery function, phase documentation, and CI workflow are implemented on `ui-test`. The development Supabase project has the migrations applied and the discovery function deployed; provider-backed acceptance, owner review, hosting, scheduling, and release checks remain open.
+**Current state:** The core React/Supabase application, ten versioned migrations, authenticated discovery function with a Remote OK public job-feed adapter, phase documentation, and CI workflow are implemented on `ui-test`. The development Supabase project has the migrations applied and the updated discovery function deployed. Source approval, live provider acceptance, hosting, scheduling, and release checks remain open.
 
 ## 1. Objective and delivery principles
 
@@ -67,7 +67,7 @@ The implementation should preserve these product constraints throughout delivery
 - Frontend: React, TypeScript, and Vite.
 - Authentication and data: Supabase Auth and PostgreSQL with Row Level Security.
 - Server-side work: Supabase Edge Functions or another verified server-side execution environment.
-- Discovery: provider interface with Brave Search API as an initial candidate, plus permitted feeds, documented APIs, official sites, and manual URL import.
+- Discovery: provider interface with the permitted Remote OK public feed for remote job opportunities; Brave Search is a gated candidate for company prospecting because persistent storage requires separate written rights. Manual URL import remains available.
 - AI: optional provider adapter with validated structured output and a rule-based fallback.
 - Email: transactional provider adapter, with Resend as a candidate.
 - Source control and delivery: GitHub and a suitable free-tier frontend host, subject to current capability and quota checks.

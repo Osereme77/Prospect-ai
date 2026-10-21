@@ -2,10 +2,11 @@
 // Deploy with: supabase functions deploy discover
 // Configure: supabase secrets set BRAVE_SEARCH_API_KEY=...
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { BraveSearchProvider } from '../_shared/discovery.ts'
+import { BraveSearchProvider, RemoteOkProvider } from '../_shared/discovery.ts'
 import { effectiveSourceRequestLimits } from '../_shared/sourcePolicy.ts'
 
-const provider = new BraveSearchProvider()
+const brave = new BraveSearchProvider()
+const remoteOk = new RemoteOkProvider()
 
 const cors = {
   'Access-Control-Allow-Origin': Deno.env.get('APP_ORIGIN') ?? 'null',
@@ -27,25 +28,28 @@ Deno.serve(async request => {
   const { data: { user }, error: authError } = await supabase.auth.getUser(token)
   if (authError || !user) return json({ error: 'unauthorized' }, 401)
 
-  let payload: { query?: unknown; country?: unknown; count?: unknown; kind?: unknown }
+  let payload: { query?: unknown; country?: unknown; count?: unknown; kind?: unknown; source?: unknown }
   try { payload = await request.json() } catch { return json({ error: 'invalid_json' }, 400) }
   const rawQuery = typeof payload.query === 'string' ? payload.query.trim() : ''
   const kind = payload.kind === 'company' ? 'company' : 'opportunity'
+  const isRemoteOk = payload.source === 'remote_ok'
+  if (isRemoteOk && kind !== 'opportunity') return json({ error: 'source_does_not_support_kind' }, 400)
+  const provider = isRemoteOk ? remoteOk : brave
   const intent = kind === 'company' ? ' company business' : ' job contract freelance'
-  const query = `${rawQuery}${intent}`
+  const query = isRemoteOk ? rawQuery : `${rawQuery}${intent}`
   if (!rawQuery || query.length > 600 || query.split(/\s+/).length > 75) return json({ error: 'invalid_query' }, 400)
   const country = typeof payload.country === 'string' && /^[A-Za-z]{2}$/.test(payload.country) ? payload.country.toUpperCase() : 'NG'
   const count = typeof payload.count === 'number' && Number.isInteger(payload.count) ? Math.min(20, Math.max(1, payload.count)) : 10
-  const apiKey = Deno.env.get('BRAVE_SEARCH_API_KEY')
-  const enabled = Deno.env.get('BRAVE_SEARCH_ENABLED') === 'true'
-  const storageRightsConfirmed = Deno.env.get('BRAVE_SEARCH_STORAGE_RIGHTS_CONFIRMED') === 'true'
-  const monthlyLimit = Number.parseInt(Deno.env.get('BRAVE_SEARCH_MONTHLY_LIMIT') ?? '', 10)
-  if (!enabled || !storageRightsConfirmed || !apiKey || !Number.isSafeInteger(monthlyLimit) || monthlyLimit < 1) return json({ error: 'provider_not_configured_or_disabled' }, 503)
+  const apiKey = isRemoteOk ? '' : Deno.env.get('BRAVE_SEARCH_API_KEY')
+  const enabled = Deno.env.get(isRemoteOk ? 'REMOTE_OK_ENABLED' : 'BRAVE_SEARCH_ENABLED') === 'true'
+  const storageRightsConfirmed = isRemoteOk || Deno.env.get('BRAVE_SEARCH_STORAGE_RIGHTS_CONFIRMED') === 'true'
+  const monthlyLimit = Number.parseInt(Deno.env.get(isRemoteOk ? 'REMOTE_OK_MONTHLY_LIMIT' : 'BRAVE_SEARCH_MONTHLY_LIMIT') ?? '', 10)
+  if (!enabled || !storageRightsConfirmed || (!isRemoteOk && !apiKey) || !Number.isSafeInteger(monthlyLimit) || monthlyLimit < 1) return json({ error: 'provider_not_configured_or_disabled' }, 503)
 
   const { data: source, error: sourceError } = await supabase.from('discovery_sources')
-    .select('id,enabled,config').eq('owner_id',user.id).eq('kind','search_api').eq('name',provider.name).maybeSingle()
+    .select('id,enabled,config').eq('owner_id',user.id).eq('kind',isRemoteOk?'public_feed':'search_api').eq('name',provider.name).maybeSingle()
   if (sourceError) return json({ error: 'source_registry_unavailable' }, 503)
-  const limits = effectiveSourceRequestLimits(Boolean(source?.enabled), source?.config, monthlyLimit)
+  const limits = effectiveSourceRequestLimits(Boolean(source?.enabled), source?.config, monthlyLimit, Date.now(), !isRemoteOk)
   if (limits === null) return json({ error: 'source_not_approved_by_owner' }, 403)
 
   const idempotencyKey = request.headers.get('Idempotency-Key')?.slice(0, 120) || crypto.randomUUID()
@@ -67,9 +71,11 @@ Deno.serve(async request => {
   }
   await supabase.from('search_runs').update({ status: 'running', started_at: new Date().toISOString() }).eq('id', run.id).eq('owner_id', user.id)
   try {
-    const normalized = await provider.search({ query, country, count }, apiKey)
+    const normalized = isRemoteOk
+      ? await remoteOk.search({ query: rawQuery, country, count })
+      : await brave.search({ query, country, count }, apiKey)
     await supabase.from('search_runs').update({ status: 'completed', result_count: normalized.length, finished_at: new Date().toISOString() }).eq('id', run.id).eq('owner_id', user.id)
-    return json({ run_id: run.id, source_id:source.id, results: normalized })
+    return json({ run_id: run.id, source_id:source.id, source:provider.name, results: normalized })
   } catch (error) {
     const code = error instanceof Error ? error.message.slice(0, 80) : 'provider_error'
     await supabase.from('search_runs').update({ status: 'failed', error_code: 'provider_error', error_summary: code, finished_at: new Date().toISOString() }).eq('id', run.id).eq('owner_id', user.id)
