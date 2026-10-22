@@ -3,6 +3,7 @@ import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 
 const css = await readFile(new URL('../src/styles/tokens.css', import.meta.url), 'utf8')
+const app = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8')
 
 function token(name) {
   const match = css.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})\\s*;`))
@@ -38,4 +39,10 @@ test('normal-text semantic colors meet WCAG AA contrast against their surfaces',
     assert.ok(ratio >= 4.5, `--${foregroundName} on --${backgroundName} has contrast ${ratio.toFixed(2)}:1`)
   }
   assert.ok(contrast(white, token('color-primary')) >= 4.5, 'white text on primary buttons must meet 4.5:1')
+})
+
+test('links opened in new tabs prevent access to the opener window', () => {
+  const links = [...app.matchAll(/<a\b[^>]*target="_blank"[^>]*>/g)].map(([tag]) => tag)
+  assert.ok(links.length > 0, 'expected external links that open in a new tab')
+  for (const link of links) assert.match(link, /\brel="[^"]*(?:noopener|noreferrer)[^"]*"/)
 })
