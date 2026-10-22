@@ -2,9 +2,17 @@ import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
 import { dialogTabWrapTarget } from '../src/lib/dialogFocus.ts'
+import { tryStorageWrite } from '../src/lib/storageWrite.ts'
 
 const css = await readFile(new URL('../src/styles/tokens.css', import.meta.url), 'utf8')
 const app = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8')
+
+test('browser storage write failures are reported without escaping', () => {
+  let calls = 0
+  assert.equal(tryStorageWrite(() => { calls += 1 }), true)
+  assert.equal(calls, 1)
+  assert.equal(tryStorageWrite(() => { throw new Error('quota exceeded') }), false)
+})
 
 function token(name) {
   const match = css.match(new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})\\s*;`))
