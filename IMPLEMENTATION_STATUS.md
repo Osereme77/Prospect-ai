@@ -28,3 +28,7 @@ No live Supabase, Brave, Resend, or hosting credentials have been added to the r
 
 - `https://jobsremyai.netlify.app` serves the application shell with HTTP 200, but its current JavaScript bundle does not contain the linked Supabase project URL or Auth screen. Local `.env.local` values have not been applied to the hosted build.
 - Configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in Netlify's build environment, configure the Supabase Auth site/redirect URLs for the hosted origin, and redeploy before testing hosted sign-in. The setup is documented in [README.md](README.md).
+
+## 2026-10-22 CI recheck
+
+- GitHub Actions run [39763732553](https://github.com/Osereme77/Prospect-ai/actions/runs/39763732553) for `ui-test` commit `90e2f70` reports frontend verification success and database job failure at `Run pgTAP database tests`. Review the failed step output to identify the assertion or SQL error before changing the test or migrations.
