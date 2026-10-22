@@ -46,6 +46,10 @@ No live Supabase, Brave, Resend, or hosting credentials have been added to the r
 
 - Added a third Playwright check for mobile navigation focus, Escape dismissal, and horizontal overflow at 375 px. Its first GitHub run showed the test kept querying the toggle by its old accessible name after the app correctly changed it from “Open navigation” to “Close navigation.” The test now locates the stable toggle element and checks its updated accessible name after Escape. CI run [39774387768](https://github.com/Osereme77/Prospect-ai/actions/runs/39774387768) confirms all three Playwright tests pass. CI uses Playwright's GitHub reporter for failure annotations.
 
+## 2026-10-22 database failure diagnostics
+
+- Updated the CI database step to publish the final 60 lines of pgTAP output into the run summary only when the test step fails. This should expose the assertion/SQL diagnostic on the next run; it runs against disposable local database fixtures and adds no secrets or hosted project data.
+
 ## 2026-10-22 hosted deployment recheck
 
 - After the user redeployed Netlify, the public site still served asset `/assets/index-auuehihc.js`, which does not contain the Supabase project URL or Auth screen. The authenticated build is not yet live at the production URL. The `main` branch remains at `40f7d5d8fc2d7ad2fbea7f639a9ab1809cd06e40`; `ui-test` has the newer implementation. Deploy a preview from `ui-test` for hosted auth verification, or move the branch to production only when ready to release.

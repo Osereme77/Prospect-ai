@@ -46,7 +46,19 @@ jobs:
       - run: supabase db reset --local
       - run: supabase db lint --local --fail-on error
       - name: Run pgTAP database tests
-        run: supabase test db --local 2>&1 | tee supabase-db-test.log
+        run: |
+          set +e
+          supabase test db --local 2>&1 | tee supabase-db-test.log
+          test_status=${PIPESTATUS[0]}
+          if [ "$test_status" -ne 0 ]; then
+            {
+              echo '### pgTAP failure output (local disposable test database)'
+              echo '```text'
+              tail -n 60 supabase-db-test.log
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+          exit "$test_status"
         shell: bash
       - uses: actions/upload-artifact@v4
         if: failure()
