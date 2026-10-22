@@ -69,4 +69,4 @@ No live Supabase, Brave, Resend, or hosting credentials have been added to the r
 ## 2026-10-22 development migration deployment
 
 - Read-only `supabase migration list --linked` confirmed migrations 001–010 were applied and 011 was pending. Reviewed `202610200011_admin_queue_health.sql`, then applied only that migration to the development project.
-- Rechecked linked history after deployment; all eleven local migrations now match the remote project history. The migration adds an admin-only aggregate function and grants its execution to authenticated users; runtime admin/ordinary-user checks remain open.
+- Rechecked linked history after deployment; all eleven local migrations now match the remote project history. A live catalog query confirmed `admin_queue_health()` is `SECURITY DEFINER`, `anon` cannot execute it, and `authenticated` can. The function itself still checks the caller's admin role; runtime checks using real admin and ordinary-user sessions remain open.
