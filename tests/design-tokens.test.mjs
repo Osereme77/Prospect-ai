@@ -5,6 +5,7 @@ import { dialogTabWrapTarget } from '../src/lib/dialogFocus.ts'
 import { tryStorageWrite } from '../src/lib/storageWrite.ts'
 
 const css = await readFile(new URL('../src/styles/tokens.css', import.meta.url), 'utf8')
+const styles = await readFile(new URL('../src/styles.css', import.meta.url), 'utf8')
 const app = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8')
 
 test('browser storage write failures are reported without escaping', () => {
@@ -48,6 +49,21 @@ test('normal-text semantic colors meet WCAG AA contrast against their surfaces',
     assert.ok(ratio >= 4.5, `--${foregroundName} on --${backgroundName} has contrast ${ratio.toFixed(2)}:1`)
   }
   assert.ok(contrast(white, token('color-primary')) >= 4.5, 'white text on primary buttons must meet 4.5:1')
+})
+
+test('generic muted copy uses the shared contrast token instead of pale gray literals', () => {
+  const paleTextColors = [
+    '#9293a2', '#9999a7', '#a4a5b0', '#737587', '#77738e', '#858696',
+    '#a0a1ad', '#7e7f8e', '#9999a6', '#90909e', '#999', '#898997', '#777',
+    '#9c9ca9', '#8a8a98', '#777989', '#757585', '#9797a4',
+  ]
+  const declarations = [...styles.matchAll(/(?:^|[;{])\s*color\s*:\s*(#[\da-f]{3,8}|var\([^)]*\))/gi)]
+  for (const color of paleTextColors) {
+    assert.ok(
+      !declarations.some(([, value]) => value.toLowerCase() === color),
+      `replace generic text color ${color} with a reviewed semantic token`,
+    )
+  }
 })
 
 test('links opened in new tabs prevent access to the opener window', () => {
