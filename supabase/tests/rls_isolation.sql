@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select extensions.plan(51);
+select extensions.plan(55);
 
 insert into auth.users (
   instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -61,6 +61,10 @@ select extensions.throws_ok(
 select extensions.throws_ok(
   $$select public.persist_scheduled_remote_ok_results('a1111111-1111-4111-8111-111111111111','d5555555-5555-4555-8555-555555555555','e4444444-4444-4444-8444-444444444444','[]'::jsonb)$$,
   '42501',null,'anonymous requests cannot persist scheduled results'
+);
+select extensions.throws_ok(
+  $$select public.record_scheduled_worker_health('succeeded',1,1,0,null)$$,
+  '42501',null,'anonymous requests cannot write scheduled worker health'
 );
 reset role;
 set local role authenticated;
@@ -128,6 +132,10 @@ select extensions.throws_ok(
   '42501',null,'ordinary users cannot inspect email queue health'
 );
 select extensions.throws_ok(
+  $$select * from public.admin_scheduled_worker_health()$$,
+  '42501',null,'ordinary users cannot inspect scheduled worker health'
+);
+select extensions.throws_ok(
   $$select public.reserve_discovery_slot('b2222222-2222-4222-8222-222222222222','f1111111-1111-4111-8111-111111111111',10000,1000000)$$,
   '42501',null,'ordinary users cannot reserve discovery quota directly'
 );
@@ -178,6 +186,7 @@ select extensions.throws_ok(
 select extensions.is((select count(*) from public.leads where source_url='https://attacker.example/job'),0::bigint,'invalid scheduled result batch leaves no partial lead');
 select extensions.ok(public.finish_scheduled_remote_ok_source('d5555555-5555-4555-8555-555555555555',true,null),'service role can finish a scheduled source run');
 select extensions.is((select count(*) from public.scheduled_discovery_state where source_id='d5555555-5555-4555-8555-555555555555' and locked_until is null and consecutive_failures=0),1::bigint,'successful scheduled source run releases its lease and resets retries');
+select extensions.ok(public.record_scheduled_worker_health('succeeded',1,1,0,null),'service role can record aggregate scheduled worker health');
 reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','b2222222-2222-4222-8222-222222222222',true);
@@ -196,6 +205,7 @@ select set_config('request.jwt.claim.sub','a1111111-1111-4111-8111-111111111111'
 select extensions.is((select title from public.leads where id='c3333333-3333-4333-8333-333333333333'),'Owner A lead','owner A lead remains unchanged after owner B update attempt');
 select extensions.is((select title from public.leads where id='c3333333-3333-4333-8333-333333333333'),'Owner A lead','owner A lead remains unchanged after owner B workspace save attempt');
 select extensions.is((select queued_count::integer from public.admin_queue_health()),3,'admin queue health includes the two existing and one scheduled opted-in owner A notifications');
+select extensions.is((select concat(last_status,':',last_claimed,':',last_completed,':',last_failed) from public.admin_scheduled_worker_health() where worker='scheduled-discovery'),'succeeded:1:1:0','admins can read the aggregate scheduled worker heartbeat');
 select extensions.throws_ok(
   $$select public.sync_workspace(
     '{"name":"Changed profile","role":"","skills":[],"services":[],"markets":[],"portfolioLinks":[],"experienceSummary":"","notificationThreshold":65,"emailNotificationsEnabled":false}'::jsonb,

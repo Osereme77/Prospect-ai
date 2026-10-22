@@ -31,3 +31,39 @@ export function getQueueHealthAlerts(health: AdminQueueHealth, now = Date.now())
 
   return alerts
 }
+
+export interface ScheduledWorkerHealth {
+  worker: string
+  last_started_at: string | null
+  last_finished_at: string | null
+  last_status: string | null
+  last_error_code: string | null
+  last_claimed: number
+  last_completed: number
+  last_failed: number
+}
+
+const workerStaleAfterMs = 36 * 60 * 60 * 1000
+const workerStuckAfterMs = 15 * 60 * 1000
+
+export function getWorkerHealthAlerts(health: ScheduledWorkerHealth[], now = Date.now()): string[] {
+  return health.flatMap(worker => {
+    const label = worker.worker === 'scheduled-discovery' ? 'Scheduled discovery' : 'A scheduled worker'
+    if (!worker.last_finished_at && worker.last_status !== 'running') {
+      return [`${label} has not completed a run yet. Configure and verify its scheduler before relying on it.`]
+    }
+    if (worker.last_status === 'running') {
+      const started = worker.last_started_at ? Date.parse(worker.last_started_at) : NaN
+      return Number.isFinite(started) && now - started >= workerStuckAfterMs
+        ? [`${label} has been running for at least 15 minutes. Check its logs and lease recovery.`]
+        : []
+    }
+    if (worker.last_status === 'failed') {
+      return [`${label} last failed${worker.last_error_code ? ` (${worker.last_error_code})` : ''}. Review its logs before retrying.`]
+    }
+    const finished = Date.parse(worker.last_finished_at ?? '')
+    return Number.isFinite(finished) && now - finished >= workerStaleAfterMs
+      ? [`${label} has not completed successfully within 36 hours. Check the scheduler configuration and recent runs.`]
+      : []
+  })
+}

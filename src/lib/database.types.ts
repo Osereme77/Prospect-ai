@@ -81,6 +81,8 @@ export type Database = {
       admin_set_discovery_source_enabled: { Args: { p_id: string; p_enabled: boolean }; Returns: boolean }
       admin_discovery_usage: { Args: Record<PropertyKey, never>; Returns: { month_start: string; total_requests: number; active_accounts: number }[] }
       admin_queue_health: { Args: Record<PropertyKey, never>; Returns: { queued_count: number; oldest_queued_at: string | null; stale_sending_count: number; failed_count: number }[] }
+      admin_scheduled_worker_health: { Args: Record<PropertyKey, never>; Returns: { worker: string; last_started_at: string | null; last_finished_at: string | null; last_status: string | null; last_error_code: string | null; last_claimed: number; last_completed: number; last_failed: number }[] }
+      record_scheduled_worker_health: { Args: { p_status: string; p_claimed?: number; p_completed?: number; p_failed?: number; p_error_code?: string | null }; Returns: boolean }
       reserve_discovery_slot: { Args: { p_owner: string; p_run_id: string; p_owner_monthly_limit: number; p_global_monthly_limit: number }; Returns: boolean }
       claim_scheduled_remote_ok_sources: { Args: { p_batch_size?: number }; Returns: { claimed_source_id: string; owner_id: string; source_config: Json; skills: string[]; services: string[]; markets: string[]; notification_threshold: number }[] }
       finish_scheduled_remote_ok_source: { Args: { p_source_id: string; p_success: boolean; p_error_code?: string | null }; Returns: boolean }

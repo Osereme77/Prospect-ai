@@ -7,7 +7,7 @@ import {
   setAdminDiscoverySourceEnabled,
   type AdminOperationsData,
 } from './lib/repository'
-import { getQueueHealthAlerts } from './lib/operations'
+import { getQueueHealthAlerts, getWorkerHealthAlerts } from './lib/operations'
 
 export default function AdminOperations({ user, notify }: { user: User; notify: (message: string) => void }) {
   const [data, setData] = useState<AdminOperationsData | null>(null)
@@ -59,6 +59,7 @@ export default function AdminOperations({ user, notify }: { user: User; notify: 
 
   const currentMonth = data.usage[0]
   const queueAlerts = getQueueHealthAlerts(data.queueHealth)
+  const workerAlerts = getWorkerHealthAlerts(data.workerHealth)
   const stats = [
     ['Sources', data.sources.length],
     ['Search runs', data.runs.length],
@@ -80,6 +81,18 @@ export default function AdminOperations({ user, notify }: { user: User; notify: 
       <b>Email queue needs attention</b>
       <ul>{queueAlerts.map(alert => <li key={alert}>{alert}</li>)}</ul>
     </section>}
+    {workerAlerts.length > 0 && <section className="cloud-error admin-queue-alert" role="alert" aria-label="Scheduled worker needs attention">
+      <b>Scheduled worker needs attention</b>
+      <ul>{workerAlerts.map(alert => <li key={alert}>{alert}</li>)}</ul>
+    </section>}
+
+    <section className="panel admin-panel">
+      <h2>Scheduled worker health</h2>
+      <p>Aggregate heartbeat for browser-closed Remote OK discovery. A successful heartbeat confirms the worker ran, not that any result is verified.</p>
+      <div className="table-wrap"><table><thead><tr><th>WORKER</th><th>LAST STATUS</th><th>STARTED</th><th>FINISHED</th><th>CLAIMED</th><th>COMPLETED</th><th>FAILED</th><th>LAST ERROR</th></tr></thead><tbody>
+        {data.workerHealth.length ? data.workerHealth.map(worker => <tr key={worker.worker}><td>{worker.worker}</td><td>{worker.last_status ?? 'Not run'}</td><td>{worker.last_started_at ? new Date(worker.last_started_at).toLocaleString() : '—'}</td><td>{worker.last_finished_at ? new Date(worker.last_finished_at).toLocaleString() : '—'}</td><td>{worker.last_claimed}</td><td>{worker.last_completed}</td><td>{worker.last_failed}</td><td>{worker.last_error_code ?? '—'}</td></tr>) : <tr><td colSpan={8} className="empty">No scheduled worker health record.</td></tr>}
+      </tbody></table></div>
+    </section>
 
     <section className="panel admin-panel">
       <h2>Monthly discovery usage</h2>

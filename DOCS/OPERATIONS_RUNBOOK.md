@@ -32,6 +32,10 @@ Requests reserve quota before calling a provider. A failed provider request does
 5. Fix the sender, account, or provider problem before retrying. An admin can use **Retry** on a failed row; the database function audits the action, resets the attempt counter, and preserves the original notification/idempotency identity. Do not retry an unverified or opted-out recipient; those rows are terminal until the owner resolves eligibility.
 6. If repeated failures occur, stop the scheduler, correct the cause, then resume it and watch the next bounded batch in **Admin**. The Admin page warns when the oldest queued item has waited at least 15 minutes, a sending lock is stale, or deliveries have failed. These checks run when an administrator opens or refreshes the page; no external scheduler heartbeat or out-of-band alert is configured.
 
+## Scheduled discovery heartbeat
+
+The `scheduled-discovery` Edge Function writes only aggregate start/finish status, bounded claimed/completed/failed counts, and a fixed error code to the service-only `scheduled_worker_health` table. Admins read this through `admin_scheduled_worker_health()`; ordinary authenticated users and anonymous clients cannot read or write the table. The Admin screen warns when no run has completed, a run remains active for 15 minutes, a run failed, or no run completed in 36 hours. A recent heartbeat confirms that the endpoint ran; it does not establish source permission, data quality, or provider success for every claimed account. The heartbeat requires migration 014 and is not operational until that migration and function build are deployed and the operator scheduler is configured.
+
 ## Database and deployment safety
 
 - The GitHub database job creates an isolated local Supabase stack, runs `supabase db reset --local`, lints it, and then runs pgTAP. Never substitute a linked/production target for a local reset.

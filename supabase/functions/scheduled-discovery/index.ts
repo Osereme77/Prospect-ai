@@ -33,15 +33,38 @@ Deno.serve(async request => {
   if (!sameSecret(authorization, serviceRoleKey) || !sameSecret(request.headers.get('x-scheduler-secret'), schedulerSecret)) {
     return json({ error: 'unauthorized' }, 401)
   }
-  if (Deno.env.get('REMOTE_OK_ENABLED') !== 'true') return json({ error: 'provider_disabled' }, 503)
-  const globalLimitSetting = Deno.env.get('REMOTE_OK_MONTHLY_LIMIT') ?? ''
-  if (!/^\d+$/.test(globalLimitSetting)) return json({ error: 'provider_not_configured' }, 503)
-  const globalLimit = Number(globalLimitSetting)
-  if (!Number.isSafeInteger(globalLimit) || globalLimit < 1 || globalLimit > 1000000) return json({ error: 'provider_not_configured' }, 503)
-
   const privileged = createClient(projectUrl, serviceRoleKey, { auth: { persistSession: false, autoRefreshToken: false } })
+  const report = async (status: 'running' | 'succeeded' | 'failed' | 'skipped', counts = { claimed: 0, completed: 0, failed: 0 }, errorCode: string | null = null) => {
+    const { error } = await privileged.rpc('record_scheduled_worker_health', {
+      p_status: status,
+      p_claimed: counts.claimed,
+      p_completed: counts.completed,
+      p_failed: counts.failed,
+      p_error_code: errorCode,
+    })
+    return !error
+  }
+  if (Deno.env.get('REMOTE_OK_ENABLED') !== 'true') {
+    const recorded = await report('skipped', undefined, 'provider_disabled')
+    return json({ error: recorded ? 'provider_disabled' : 'worker_health_unavailable' }, 503)
+  }
+  const globalLimitSetting = Deno.env.get('REMOTE_OK_MONTHLY_LIMIT') ?? ''
+  if (!/^\d+$/.test(globalLimitSetting)) {
+    const recorded = await report('failed', undefined, 'provider_limit_not_configured')
+    return json({ error: recorded ? 'provider_not_configured' : 'worker_health_unavailable' }, 503)
+  }
+  const globalLimit = Number(globalLimitSetting)
+  if (!Number.isSafeInteger(globalLimit) || globalLimit < 1 || globalLimit > 1000000) {
+    const recorded = await report('failed', undefined, 'provider_limit_invalid')
+    return json({ error: recorded ? 'provider_not_configured' : 'worker_health_unavailable' }, 503)
+  }
+
+  if (!await report('running')) return json({ error: 'worker_health_unavailable' }, 503)
   const { data: sources, error: claimError } = await privileged.rpc('claim_scheduled_remote_ok_sources', { p_batch_size: 3 })
-  if (claimError) return json({ error: 'schedule_claim_failed' }, 503)
+  if (claimError) {
+    await report('failed', undefined, 'schedule_claim_failed')
+    return json({ error: 'schedule_claim_failed' }, 503)
+  }
 
   let completed = 0
   let failed = 0
@@ -125,5 +148,8 @@ Deno.serve(async request => {
     }
   }
 
-  return json({ claimed: (sources ?? []).length, completed, failed, skipped })
+  const claimed = (sources ?? []).length
+  const healthRecorded = await report(failed > 0 ? 'failed' : 'succeeded', { claimed, completed, failed }, failed > 0 ? 'source_run_failed' : null)
+  if (!healthRecorded) return json({ error: 'worker_health_unavailable' }, 503)
+  return json({ claimed, completed, failed, skipped })
 })
