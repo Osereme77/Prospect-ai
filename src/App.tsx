@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import { Activity, Bell, BriefcaseBusiness, Building2, Check, ChevronRight, Compass, Download, LayoutDashboard, LogOut, Plus, Search, Settings as SettingsIcon, ShieldCheck, Sparkles, Target, Trash2, X } from 'lucide-react'
 import type { User } from '@supabase/supabase-js'
@@ -25,12 +25,38 @@ const initial=readProfile()
 function scoreTone(score:number){return score>=85?'good':score>=70?'mid':'low'}
 function avatar(name:string){return name.split(' ').map(x=>x[0]).slice(0,2).join('').toUpperCase()}
 function evidenceItems(lead:Lead):EvidenceItem[]{if(lead.evidenceDetails)return lead.evidenceDetails;if(!lead.url)return[];return lead.evidence.map(claim=>({claim,sourceUrl:lead.url,observedAt:lead.createdAt,type:'public_page' as const,status:'unverified' as const}))}
+function useDialogKeyboard(open:boolean,selector:string,onClose:()=>void,canClose=true){
+ const closeRef=useRef(onClose),canCloseRef=useRef(canClose)
+ closeRef.current=onClose;canCloseRef.current=canClose
+ useEffect(()=>{
+  if(!open)return
+  const dialog=document.querySelector<HTMLElement>(selector)
+  if(!dialog)return
+  const previous=document.activeElement instanceof HTMLElement?document.activeElement:null
+  const focusable=()=>Array.from(dialog.querySelectorAll<HTMLElement>('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])')).filter(item=>item.getClientRects().length>0)
+  const onKeyDown=(event:KeyboardEvent)=>{
+   if(event.key==='Escape'){if(canCloseRef.current){event.preventDefault();closeRef.current()}return}
+   if(event.key!=='Tab')return
+   const items=focusable(),first=items[0],last=items[items.length-1]
+   if(!first){event.preventDefault();dialog.focus();return}
+   if(event.shiftKey&&(document.activeElement===first||!dialog.contains(document.activeElement))){event.preventDefault();last?.focus()}
+   else if(!event.shiftKey&&(document.activeElement===last||!dialog.contains(document.activeElement))){event.preventDefault();first.focus()}
+  }
+  dialog.addEventListener('keydown',onKeyDown)
+  const initial=focusable()[0]
+  if(initial)initial.focus();else dialog.focus()
+  return()=>{dialog.removeEventListener('keydown',onKeyDown);if(previous?.isConnected)previous.focus()}
+ },[open,selector])
+}
 function PublicPageReview({defaultUrl,review}:{defaultUrl:string;review:(result:PublicResearchResult)=>void}){
  function submit(event:FormEvent<HTMLFormElement>){event.preventDefault();const form=event.currentTarget,data=new FormData(form);try{review(reviewPublicPage(String(data.get('pageText')||''),String(data.get('pageUrl')||'')));form.reset()}catch(error){window.alert(error instanceof Error?error.message:'Could not review this excerpt')}}
  return <form className="page-review" onSubmit={submit}><h4>Review a public page</h4><p>Paste a short excerpt you are permitted to use. Extraction runs locally; page text is not sent to an AI provider.</p><label>Page excerpt<textarea name="pageText" rows={4} required maxLength={8000} placeholder="Paste the relevant public text (up to 8,000 characters)."/></label><label>Public source URL<input name="pageUrl" type="url" required defaultValue={defaultUrl} placeholder="https://…"/></label><button className="secondary"><Compass size={14}/> Extract unverified observations</button></form>
 }
 export default function App({user,onSignOut}:AppProps){
  const [leads,setLeads]=useState<Lead[]>(()=>user?[]:readLeads()),[pendingLeads,setPendingLeads]=useState<Lead[]|null>(null),[pendingProfile,setPendingProfile]=useState<ProspectProfile|null>(null),[sources,setSources]=useState<DiscoverySource[]>([]),[pendingSource,setPendingSource]=useState<DiscoverySource|null>(null),[notifications,setNotifications]=useState<AppNotification[]>(()=>user?[]:readNotices()),[searchRuns,setSearchRuns]=useState<SearchRun[]>(()=>user?[]:readRuns()),[page,setPage]=useState<Page>('Overview'),[query,setQuery]=useState(''),[statusFilter,setStatusFilter]=useState<LeadStatus|''>(''),[scoreFilter,setScoreFilter]=useState(''),[marketFilter,setMarketFilter]=useState(''),[sourceFilter,setSourceFilter]=useState(''),[serviceFilter,setServiceFilter]=useState(''),[budgetFilter,setBudgetFilter]=useState<'known'|'unknown'|''>(''),[dateFilter,setDateFilter]=useState(''),[unreadOnly,setUnreadOnly]=useState(false),[modal,setModal]=useState(false),[discoveryModal,setDiscoveryModal]=useState(false),[discoveryBusy,setDiscoveryBusy]=useState(false),[detail,setDetail]=useState<Lead|null>(null),[toast,setToast]=useState(''),[profile,setProfile]=useState(initial),[accountRole,setAccountRole]=useState<'user'|'admin'|'super_admin'>('user'),[mobile,setMobile]=useState(false),[cloudReady,setCloudReady]=useState(!user),[cloudLoaded,setCloudLoaded]=useState(!user),[cloudError,setCloudError]=useState('')
+ useDialogKeyboard(discoveryModal,'[aria-labelledby="discovery-title"]',()=>setDiscoveryModal(false),!discoveryBusy)
+ useDialogKeyboard(modal,'[aria-labelledby="intake-title"]',()=>setModal(false))
+ useDialogKeyboard(Boolean(detail),'[aria-labelledby="detail-title"]',()=>setDetail(null))
  const notice=notifications.filter(item=>!item.readAt).length
  const [contactFilter,setContactFilter]=useState<ContactAvailability|''>('')
  const workspaceSummary=useMemo(()=>summarizeWorkspace(leads,sources,searchRuns),[leads,sources,searchRuns])
