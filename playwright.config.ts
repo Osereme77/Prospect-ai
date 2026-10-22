@@ -6,7 +6,7 @@ export default defineConfig({
   testDir: './e2e',
   fullyParallel: false,
   workers: process.env.CI ? 1 : undefined,
-  reporter: 'list',
+  reporter: process.env.CI ? 'github' : 'list',
   use: {
     baseURL,
     trace: 'retain-on-failure',

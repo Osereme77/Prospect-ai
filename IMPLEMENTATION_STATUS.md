@@ -44,7 +44,7 @@ No live Supabase, Brave, Resend, or hosting credentials have been added to the r
 
 ## 2026-10-22 mobile browser check
 
-- Added a third Playwright check for mobile navigation focus, Escape dismissal, and horizontal overflow at 375 px. The test is discovered locally and awaits its GitHub browser run; unit tests and the production build remain green from the preceding verification.
+- Added a third Playwright check for mobile navigation focus, Escape dismissal, and horizontal overflow at 375 px. The test is discovered locally, but its first GitHub browser run failed at `npm run test:e2e`; the public check annotation only exposed the generic step exit code. CI now uses Playwright's GitHub reporter so the next run can attach test-level failure details.
 
 ## 2026-10-22 hosted deployment recheck
 
