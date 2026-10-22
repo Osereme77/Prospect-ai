@@ -36,6 +36,14 @@ Requests reserve quota before calling a provider. A failed provider request does
 
 The `scheduled-discovery` Edge Function writes only aggregate start/finish status, bounded claimed/completed/failed counts, and a fixed error code to the service-only `scheduled_worker_health` table. Migrations 014 and the updated function are deployed to development. Admins read this through `admin_scheduled_worker_health()`; ordinary authenticated users and anonymous clients cannot read or write the table. The Admin screen warns when no run has completed, a run remains active for 15 minutes, a run failed, or no run completed in 36 hours. A recent heartbeat confirms that the endpoint ran; it does not establish source permission, data quality, or provider success for every claimed account. The operator scheduler is not configured; migration and function deployment alone do not activate it.
 
+## Data retention and lead deletion
+
+- There is no automatic expiration for workspace leads, evidence, scores, notifications, or audit history. The owner deletes records when they are no longer needed.
+- To remove one prospect, open its details and choose **Delete prospect**. Confirm the prompt. In browser-local mode this removes the prospect and linked local alerts from that browser. In cloud mode the owner-scoped workspace transaction removes the lead; database foreign keys cascade its evidence, score history, linked notifications, and queued email jobs. Confirm the modal closes and the lead is absent before treating deletion as complete. If a cloud save fails, the app keeps the prior displayed record and reports that a retry is needed.
+- To remove all results from one discovery source, use **Settings → Remove source and stored results**. The app disables the source first, then deletes its associated leads and linked records before removing the source configuration.
+- The app does not currently provide self-service Auth account deletion. Account removal must be handled by a trusted project administrator after confirming the request and any required export. Deleting the Auth account cascades its owner-scoped workspace data; audit rows preserve the event shape with a null actor reference. Do not manually delete rows from `auth.users` or application tables with ad hoc SQL.
+- A filtered CSV export covers lead fields only; it is not a full account archive and does not include private evidence history, notifications, credentials, or audit logs.
+
 ## Database and deployment safety
 
 - The GitHub database job creates an isolated local Supabase stack, runs `supabase db reset --local`, lints it, and then runs pgTAP. Never substitute a linked/production target for a local reset.
