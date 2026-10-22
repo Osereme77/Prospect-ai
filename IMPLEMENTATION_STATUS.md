@@ -74,3 +74,9 @@ No live Supabase, Brave, Resend, or hosting credentials have been added to the r
 ## 2026-10-22 managed provider secret inventory
 
 - Listed names only from the linked project's Supabase secret store; no secret values were read or printed. `BRAVE_SEARCH_API_KEY` is present. The Resend key is stored under `Resend_Api`, but the worker reads `RESEND_API_KEY`; names are case-sensitive. `EMAIL_FROM` and `OUTBOX_WORKER_SECRET` are not present, and no scheduler has been verified. Email delivery therefore remains inactive.
+
+## 2026-10-22 development Auth readiness
+
+- The public Supabase Auth settings endpoint is reachable; email sign-up is enabled and email autoconfirm is off. The public response does not expose the site URL or redirect allowlist, so those hosted settings remain unverified.
+- Aggregate database checks found zero Auth users and zero `user_roles` rows. The first owner must sign up and verify their email, then complete the trusted Super Admin bootstrap in [OWNER_BOOTSTRAP.md](DOCS/OWNER_BOOTSTRAP.md).
+- A live catalog check confirmed row-level security is enabled on `audit_logs`, `lead_evidence`, `lead_scores`, `leads`, `notifications`, `outbox`, `profiles`, `search_runs`, and `user_roles`. This catalog check does not replace cross-user data isolation acceptance using real accounts.
