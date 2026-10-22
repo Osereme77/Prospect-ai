@@ -70,52 +70,43 @@ export async function deleteCloudDiscoverySource(user:User,id:string){
 
 export async function saveCloudWorkspace(user: User, leads: Lead[], profile?: ProspectProfile) {
   if (!supabase) throw new Error('Cloud mode is not configured.')
-  if (profile) {
-    const { error } = await supabase.from('profiles').upsert({ id: user.id, display_name: profile.name, headline: profile.role, skills: profile.skills, services: profile.services, markets: profile.markets, portfolio_links:profile.portfolioLinks, experience_summary:profile.experienceSummary, notification_threshold:profile.notificationThreshold, email_notifications_enabled:profile.emailNotificationsEnabled, updated_at: new Date().toISOString() })
-    if (error) throw error
-  }
-  const { data: existing, error: listError } = await supabase.from('leads').select('id').eq('owner_id', user.id)
-  if (listError) throw listError
-  const retained = new Set(leads.map(lead => lead.id))
-  const removed = (existing ?? []).map(row => row.id).filter(id => !retained.has(id))
-  if (removed.length) {
-    const { error } = await supabase.from('leads').delete().eq('owner_id', user.id).in('id', removed)
-    if (error) throw error
-  }
-  if (!leads.length) return
-  const { error: leadError } = await supabase.from('leads').upsert(leads.map(lead => ({
-    id: lead.id, owner_id: user.id, kind: lead.kind.toLowerCase() as 'company'|'opportunity', title: lead.title, organization: lead.organization,
-    source_url: lead.url || null, location: lead.location || null, summary: lead.summary, status: dbStatus(lead.status),
-    budget_signal: lead.budget ?? null, contact_availability: lead.contactAvailability ?? 'unknown', follow_up_at: lead.followUp ?? null, notes: lead.notes ?? '', duplicate_of:lead.duplicateOf??null,
-    source_label: lead.source, source_id:lead.sourceId??null, search_run_id:lead.searchRunId??null, tags: lead.tags, research_gaps:lead.researchGaps??[], posted_label: lead.postedAt, score: lead.score, score_reason: lead.scoreReason,
-    updated_at: new Date().toISOString(),
-  })), { onConflict: 'id' })
-  if (leadError) throw leadError
-  const evidence = leads.flatMap(lead => {
-    const items: EvidenceItem[] = lead.evidenceDetails?.length ? lead.evidenceDetails : lead.url ? lead.evidence.filter(Boolean).map(claim=>({claim,sourceUrl:lead.url,observedAt:lead.createdAt,type:'public_page',status:'unverified'})) : []
-    return items.map(item=>({lead_id:lead.id,owner_id:user.id,source_url:item.sourceUrl,claim:item.claim,observed_at:item.observedAt,evidence_type:item.type,verification_status:item.status,reviewed_at:item.reviewedAt??null}))
-  })
-  if (evidence.length) {
-    const { error } = await supabase.from('lead_evidence').upsert(evidence, { onConflict: 'lead_id,source_url,claim' })
-    if (error) throw error
-  }
   const scoreable = leads.filter(lead => lead.scoreBreakdown)
+  let snapshots: {lead_id:string;score:number;relevance:number;need_evidence:number;budget_signals:number;freshness:number;source_confidence:number;explanation:{summary:string};scoring_version:string}[] = []
   if (scoreable.length) {
     const { data: oldScores, error: scoreReadError } = await supabase.from('lead_scores').select('lead_id,score,relevance,need_evidence,budget_signals,freshness,source_confidence,created_at').eq('owner_id', user.id).in('lead_id', scoreable.map(lead => lead.id)).order('created_at', { ascending: false })
     if (scoreReadError) throw scoreReadError
     const latest = new Map<string, {lead_id:string;score:number;relevance:number;need_evidence:number;budget_signals:number;freshness:number;source_confidence:number}>()
     for (const row of oldScores ?? []) if (!latest.has(row.lead_id)) latest.set(row.lead_id, row)
-    const snapshots = scoreable.flatMap(lead => {
+    snapshots = scoreable.flatMap(lead => {
       const parts = lead.scoreBreakdown!
       const old = latest.get(lead.id)
       if (old && old.score === lead.score && old.relevance === parts.relevance && old.need_evidence === parts.needEvidence && old.budget_signals === parts.budgetSignals && old.freshness === parts.freshness && old.source_confidence === parts.sourceConfidence) return []
-      return [{ lead_id:lead.id, owner_id:user.id, score:lead.score, relevance:parts.relevance, need_evidence:parts.needEvidence, budget_signals:parts.budgetSignals, freshness:parts.freshness, source_confidence:parts.sourceConfidence, explanation:{summary:lead.scoreReason}, scoring_version:'v1' }]
+      return [{ lead_id:lead.id, score:lead.score, relevance:parts.relevance, need_evidence:parts.needEvidence, budget_signals:parts.budgetSignals, freshness:parts.freshness, source_confidence:parts.sourceConfidence, explanation:{summary:lead.scoreReason}, scoring_version:'v1' }]
     })
-    if (snapshots.length) {
-      const { error } = await supabase.from('lead_scores').upsert(snapshots, { onConflict: 'lead_id,scoring_version,score,relevance,need_evidence,budget_signals,freshness,source_confidence', ignoreDuplicates: true })
-      if (error) throw error
-    }
   }
+  const evidence = leads.flatMap(lead => {
+    const items: EvidenceItem[] = lead.evidenceDetails?.length ? lead.evidenceDetails : lead.url ? lead.evidence.filter(Boolean).map(claim=>({claim,sourceUrl:lead.url,observedAt:lead.createdAt,type:'public_page',status:'unverified'})) : []
+    return items.map(item=>({lead_id:lead.id,source_url:item.sourceUrl,claim:item.claim,observed_at:item.observedAt,evidence_type:item.type,verification_status:item.status,reviewed_at:item.reviewedAt??null}))
+  })
+  const { data, error } = await supabase.rpc('sync_workspace', {
+    p_profile: profile ? {
+      name: profile.name, role: profile.role, skills: profile.skills, services: profile.services, markets: profile.markets,
+      portfolioLinks: profile.portfolioLinks, experienceSummary: profile.experienceSummary,
+      notificationThreshold: profile.notificationThreshold, emailNotificationsEnabled: profile.emailNotificationsEnabled,
+    } : null,
+    p_leads: leads.map(lead => ({
+      id: lead.id, kind: lead.kind.toLowerCase(), title: lead.title, organization: lead.organization,
+      source_url: lead.url || null, location: lead.location || null, summary: lead.summary, status: dbStatus(lead.status),
+      budget_signal: lead.budget ?? null, contact_availability: lead.contactAvailability ?? 'unknown', follow_up_at: lead.followUp ?? null,
+      notes: lead.notes ?? '', duplicate_of: lead.duplicateOf ?? null, source_label: lead.source, source_id: lead.sourceId ?? null,
+      search_run_id: lead.searchRunId ?? null, tags: lead.tags, research_gaps: lead.researchGaps ?? [], posted_label: lead.postedAt,
+      score: lead.score, score_reason: lead.scoreReason,
+    })),
+    p_evidence: evidence,
+    p_scores: snapshots,
+  })
+  if (error) throw error
+  if (!data) throw new Error('Cloud workspace save did not complete.')
 }
 
 export async function saveCloudNotification(user:User, notification:AppNotification) {

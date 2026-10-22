@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select extensions.plan(27);
+select extensions.plan(33);
 
 insert into auth.users (
   instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -41,6 +41,10 @@ select extensions.lives_ok(
 select extensions.throws_ok(
   $$select public.reserve_discovery_slot('a1111111-1111-4111-8111-111111111111','e1111111-1111-4111-8111-111111111111',100,100)$$,
   '42501',null,'anonymous requests cannot reserve discovery quota'
+);
+select extensions.throws_ok(
+  $$select public.sync_workspace(null,'[]'::jsonb,'[]'::jsonb,'[]'::jsonb)$$,
+  '42501',null,'anonymous requests cannot save a workspace'
 );
 reset role;
 set local role authenticated;
@@ -129,6 +133,24 @@ set local role authenticated;
 select set_config('request.jwt.claim.sub','a1111111-1111-4111-8111-111111111111',true);
 select extensions.is((select title from public.leads where id='c3333333-3333-4333-8333-333333333333'),'Owner A lead','owner A lead remains unchanged after owner B update attempt');
 select extensions.is((select queued_count::integer from public.admin_queue_health()),2,'admin queue health reports both opted-in owner A notifications');
+select extensions.throws_ok(
+  $$select public.sync_workspace(
+    '{"name":"Changed profile","role":"","skills":[],"services":[],"markets":[],"portfolioLinks":[],"experienceSummary":"","notificationThreshold":65,"emailNotificationsEnabled":false}'::jsonb,
+    '[{"id":"c3333333-3333-4333-8333-333333333333","kind":"opportunity","title":"Should roll back","organization":"Example","source_url":null,"location":null,"summary":"","status":"new","budget_signal":null,"contact_availability":"unknown","follow_up_at":null,"notes":"","duplicate_of":null,"source_label":"Saved prospect","source_id":null,"search_run_id":null,"tags":[],"research_gaps":[],"posted_label":"Saved prospect","score":50,"score_reason":"Score not calculated yet."}]'::jsonb,
+    '[{"lead_id":"c3333333-3333-4333-8333-333333333333","source_url":"javascript:alert(1)","claim":"invalid","observed_at":"2026-10-22T00:00:00Z","evidence_type":"public_page","verification_status":"unverified","reviewed_at":null}]'::jsonb,
+    '[]'::jsonb
+  )$$,
+  '23514',null,'workspace save failure rolls back every earlier write'
+);
+select extensions.is((select title from public.leads where id='c3333333-3333-4333-8333-333333333333'),'Owner A lead','failed workspace save preserves the existing lead');
+select extensions.is((select display_name from public.profiles where id='a1111111-1111-4111-8111-111111111111'),'','failed workspace save preserves the existing profile');
+select extensions.ok(public.sync_workspace(
+  null,
+  '[{"id":"c3333333-3333-4333-8333-333333333333","kind":"opportunity","title":"Owner A lead","organization":"Example","source_url":null,"location":null,"summary":"","status":"new","budget_signal":null,"contact_availability":"unknown","follow_up_at":null,"notes":"","duplicate_of":null,"source_label":"Saved prospect","source_id":null,"search_run_id":null,"tags":[],"research_gaps":[],"posted_label":"Saved prospect","score":50,"score_reason":"Score not calculated yet."}]'::jsonb,
+  '[]'::jsonb,
+  '[]'::jsonb
+), 'authenticated owner can save a workspace transactionally');
+select extensions.is((select title from public.leads where id='c3333333-3333-4333-8333-333333333333'),'Owner A lead','transactional workspace save can retrieve its lead');
 
 select * from extensions.finish();
 rollback;

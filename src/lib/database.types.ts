@@ -75,6 +75,7 @@ export type Database = {
     Views: Record<string, never>
     Functions: {
       is_admin: { Args: Record<PropertyKey, never>; Returns: boolean }
+      sync_workspace: { Args: { p_profile: Json | null; p_leads: Json; p_evidence: Json; p_scores: Json }; Returns: boolean }
       admin_retry_notification_outbox: { Args: { p_id: string }; Returns: boolean }
       admin_set_discovery_source_enabled: { Args: { p_id: string; p_enabled: boolean }; Returns: boolean }
       admin_discovery_usage: { Args: Record<PropertyKey, never>; Returns: { month_start: string; total_requests: number; active_accounts: number }[] }
