@@ -25,18 +25,23 @@ test('creates, retrieves, and safely deletes a manual opportunity', async ({ pag
   await page.getByRole('button', { name: new RegExp(title) }).click()
   const detail = page.getByRole('dialog', { name: title })
   await expect(detail).toBeVisible()
-  const cancelEvent = page.waitForEvent('dialog')
+  let cancelMessage = ''
+  page.once('dialog', async dialog => {
+    cancelMessage = dialog.message()
+    await dialog.dismiss()
+  })
   await detail.getByRole('button', { name: 'Delete prospect' }).click()
-  const cancelConfirmation = await cancelEvent
-  await cancelConfirmation.dismiss()
+  expect(cancelMessage).toContain('cannot be undone')
   await expect(detail).toBeVisible()
   await expect(page.getByRole('button', { name: new RegExp(title) })).toBeVisible()
 
-  const confirmationEvent = page.waitForEvent('dialog')
+  let confirmationMessage = ''
+  page.once('dialog', async dialog => {
+    confirmationMessage = dialog.message()
+    await dialog.accept()
+  })
   await detail.getByRole('button', { name: 'Delete prospect' }).click()
-  const confirmation = await confirmationEvent
-  expect(confirmation.message()).toContain('cannot be undone')
-  await confirmation.accept()
+  expect(confirmationMessage).toContain('cannot be undone')
   await expect(detail).toBeHidden()
   await expect(page.getByRole('button', { name: new RegExp(title) })).toHaveCount(0)
 })
