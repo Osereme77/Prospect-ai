@@ -63,6 +63,8 @@ Without Supabase values the app uses local browser storage. With Supabase values
 
 ```sh
 npm test
+npx playwright install chromium
+npm run test:e2e
 npm run build
 ```
 

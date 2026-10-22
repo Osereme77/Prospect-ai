@@ -32,3 +32,8 @@ No live Supabase, Brave, Resend, or hosting credentials have been added to the r
 ## 2026-10-22 CI recheck
 
 - GitHub Actions run [39763732553](https://github.com/Osereme77/Prospect-ai/actions/runs/39763732553) for `ui-test` commit `90e2f70` reports frontend verification success and database job failure at `Run pgTAP database tests`. Review the failed step output to identify the assertion or SQL error before changing the test or migrations.
+
+## 2026-10-22 browser workflow coverage
+
+- Added a Playwright end-to-end test and CI job for creating a manual opportunity, saving it, and retrieving it after a page reload. The runner explicitly clears Supabase environment variables so the test covers the local browser-storage workflow without connecting to project data.
+- Playwright discovers the test locally, but this managed Windows environment timed out while launching Chromium. The Linux CI job will provide the browser execution result.
