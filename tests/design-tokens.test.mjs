@@ -56,6 +56,7 @@ test('generic muted copy uses the shared contrast token instead of pale gray lit
     '#9293a2', '#9999a7', '#a4a5b0', '#737587', '#77738e', '#858696',
     '#a0a1ad', '#7e7f8e', '#9999a6', '#90909e', '#999', '#898997', '#777',
     '#9c9ca9', '#8a8a98', '#777989', '#757585', '#9797a4',
+    '#77798a', '#878899', '#8a82a6',
   ]
   const declarations = [...styles.matchAll(/(?:^|[;{])\s*color\s*:\s*(#[\da-f]{3,8}|var\([^)]*\))/gi)]
   for (const color of paleTextColors) {
