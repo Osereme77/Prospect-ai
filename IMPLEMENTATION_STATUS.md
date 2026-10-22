@@ -122,5 +122,11 @@ No live Supabase, Brave, Resend, or hosting secret values are stored in the repo
 ## 2026-10-22 development Auth readiness
 
 - The public Supabase Auth settings endpoint is reachable; email sign-up is enabled and email autoconfirm is off. The public response does not expose the site URL or redirect allowlist, so those hosted settings remain unverified.
-- Aggregate database checks found zero Auth users and zero `user_roles` rows. The first owner must sign up and verify their email, then complete the trusted Super Admin bootstrap in [OWNER_BOOTSTRAP.md](DOCS/OWNER_BOOTSTRAP.md).
+- This was a point-in-time check before the owner created the account through the Supabase dashboard; it is superseded by the aggregate verification below.
 - A live catalog check confirmed row-level security is enabled on `audit_logs`, `lead_evidence`, `lead_scores`, `leads`, `notifications`, `outbox`, `profiles`, `search_runs`, and `user_roles`. This catalog check does not replace cross-user data isolation acceptance using real accounts.
+
+## 2026-10-22 current-state reconciliation
+
+- Read-only aggregate query against the linked development database reports one Auth user, one `user_roles` row, and one `super_admin` role. This supersedes the earlier zero-user note; it does not verify hosted sign-in, email confirmation, or two-user isolation.
+- Current local verification: `npm test` passes 44/44; `npm run build` passes. Vite reports the existing 525.65 KB JavaScript chunk warning.
+- The `ui-test` preview's hosted Auth remains unverified. `AuthGate` renders the local workspace when the built frontend lacks `VITE_SUPABASE_URL` or `VITE_SUPABASE_PUBLISHABLE_KEY`; Netlify's signed-out session prevented inspection of the branch build environment during this check. No deployment or access setting was changed.
