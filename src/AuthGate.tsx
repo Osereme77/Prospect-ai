@@ -19,9 +19,25 @@ export default function AuthGate() {
   useEffect(() => {
     if (!supabase) return
     let alive = true
-    supabase.auth.getSession().then(({ data }) => { if (alive) { setSession(data.session); setReady(true) } })
+    let authEventReceived = false
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (!alive) return
+      if (!authEventReceived) {
+        setSession(data.session)
+        if (error) setError('Could not restore the saved sign-in session. You can try signing in again.')
+      }
+      setReady(true)
+    }).catch(() => {
+      if (!alive) return
+      if (!authEventReceived) {
+        setSession(null)
+        setError('Could not restore the saved sign-in session. You can try signing in again.')
+      }
+      setReady(true)
+    })
     const { data: listener } = supabase.auth.onAuthStateChange((event, next) => {
       if (!alive) return
+      authEventReceived = true
       setSession(next); setReady(true)
       if (event === 'PASSWORD_RECOVERY') setMode('update_password')
     })

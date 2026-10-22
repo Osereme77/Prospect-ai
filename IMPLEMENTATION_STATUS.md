@@ -16,3 +16,9 @@ This file records current code and the remaining acceptance work against [IMPLEM
 | 9. Release | Local setup, Supabase migration/function instructions, environment example, and guarded provider enablement. | Create/configure project accounts and secrets, deploy hosting/functions, backups/rollback, execute alpha/beta gates, and verify real permitted source use. |
 
 No live Supabase, Brave, Resend, or hosting credentials have been added to the repository. The development Supabase project is linked and migrations 001–010 are applied; `.env.local` contains only the Supabase public project URL and key. The updated discovery Edge Function is deployed with source flags remaining off by default. Keep service-role and provider secrets in managed server-side secrets. Remote OK requires owner terms approval in Settings and server enable/cap configuration; Brave discovery also requires express written storage rights. Email delivery remains inactive until a verified sender, server secrets, and scheduler are configured.
+
+## 2026-10-22 auth recovery follow-up
+
+- `AuthGate` now exits the session-loading state when Supabase session restoration returns an error or rejects, showing a recoverable sign-in message. An auth event takes precedence over a later `getSession()` result to avoid overwriting a refreshed session.
+- Verification after the change: `npm test` passed 30/30; `npm run build` passed. Vite reports the existing 524 KB JavaScript chunk-size warning.
+- Database verification remains open: the local workstation has no Supabase CLI or Docker command available, and the hosted pgTAP failure log has not been retrieved. The RLS suite declares 24 assertions.
