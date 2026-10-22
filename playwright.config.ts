@@ -11,15 +11,40 @@ export default defineConfig({
     baseURL,
     trace: 'retain-on-failure',
   },
-  webServer: {
-    command: 'npm run dev -- --host 127.0.0.1 --port 4173 --strictPort',
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
-    env: {
-      VITE_SUPABASE_URL: '',
-      VITE_SUPABASE_PUBLISHABLE_KEY: '',
-      VITE_SUPABASE_ANON_KEY: '',
+  projects: [
+    {
+      name: 'local-storage',
+      testMatch: 'workspace.spec.ts',
+      use: { baseURL: 'http://127.0.0.1:4173' },
     },
-  },
+    {
+      name: 'auth-gate',
+      testMatch: 'auth.spec.ts',
+      use: { baseURL: 'http://127.0.0.1:4174' },
+    },
+  ],
+  webServer: [
+    {
+      command: 'npm run dev -- --host 127.0.0.1 --port 4173 --strictPort',
+      url: 'http://127.0.0.1:4173',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+      env: {
+        VITE_SUPABASE_URL: '',
+        VITE_SUPABASE_PUBLISHABLE_KEY: '',
+        VITE_SUPABASE_ANON_KEY: '',
+      },
+    },
+    {
+      command: 'npm run dev -- --host 127.0.0.1 --port 4174 --strictPort',
+      url: 'http://127.0.0.1:4174',
+      reuseExistingServer: !process.env.CI,
+      timeout: 60_000,
+      env: {
+        VITE_SUPABASE_URL: 'https://auth-gate-test.supabase.co',
+        VITE_SUPABASE_PUBLISHABLE_KEY: 'test-publishable-key',
+        VITE_SUPABASE_ANON_KEY: '',
+      },
+    },
+  ],
 })
