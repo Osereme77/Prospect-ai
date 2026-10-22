@@ -49,7 +49,7 @@ Deno.serve(async request => {
   for (const source of sources ?? []) {
     const finish = async (success: boolean, code: string | null = null) => {
       const { data, error } = await privileged.rpc('finish_scheduled_remote_ok_source', {
-        p_source_id: source.source_id,
+        p_source_id: source.claimed_source_id,
         p_success: success,
         p_error_code: code,
       })
@@ -66,10 +66,10 @@ Deno.serve(async request => {
 
     const { data: run, error: runError } = await privileged.from('search_runs').insert({
       owner_id: source.owner_id,
-      source_id: source.source_id,
+      source_id: source.claimed_source_id,
       query,
       status: 'queued',
-      idempotency_key: `scheduled/remote-ok/${source.source_id}/${crypto.randomUUID()}`,
+      idempotency_key: `scheduled/remote-ok/${source.claimed_source_id}/${crypto.randomUUID()}`,
     }).select('id').single()
     if (runError || !run) {
       await finish(false, 'scheduled_run_creation_failed')
@@ -104,7 +104,7 @@ Deno.serve(async request => {
       const payload = scheduledRemoteOkPayload(results, { skills: source.skills ?? [], services: source.services ?? [] })
       const { data: inserted, error: persistError } = await privileged.rpc('persist_scheduled_remote_ok_results', {
         p_owner: source.owner_id,
-        p_source_id: source.source_id,
+        p_source_id: source.claimed_source_id,
         p_run_id: run.id,
         p_results: payload,
       })

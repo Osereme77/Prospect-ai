@@ -96,6 +96,7 @@ No live Supabase, Brave, Resend, or hosting secret values are stored in the repo
 - Added the `scheduled-discovery` Edge Function. It requires both the service-role bearer token and a separate scheduler secret, checks the global provider flag/cap, claims at most three accounts, records aggregate-only completion, and does not return profile or lead data. A unit test verifies bounded Remote OK-only output and reuses the existing explainable scorer.
 - `npm test` passed 44/44 and `npm run build` passed before the final cap-string validation hardening. Local pgTAP could not start because the Supabase CLI was denied access to its telemetry file outside the workspace; this is not a database test result. The new migration and 51 assertions are pending GitHub Actions.
 - Migration 013 and the Edge Function have not yet been applied to the linked project. No cron or provider flag was enabled. The user's `ui-test` preview and `main` are unchanged by this work so far.
+- GitHub Actions run [39833006502](https://github.com/Osereme77/Prospect-ai/actions/runs/39833006502) passed frontend verification and all three browser E2E tests, but migration lint found an ambiguous PL/pgSQL `source_id` reference in the claim RPC before pgTAP ran. The returned claim field is now named `claimed_source_id`; the fixed migration is awaiting a new CI run.
 - `npm test` passes 43/43; `npm run build` passes with the existing 524.88 KB chunk warning. A full rendered screen-reader and visual review still requires owner acceptance.
 
 ## 2026-10-22 final neutral-label contrast pass

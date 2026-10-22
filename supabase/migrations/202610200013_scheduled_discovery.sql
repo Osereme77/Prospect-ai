@@ -15,7 +15,7 @@ grant select, insert, update, delete on public.scheduled_discovery_state to serv
 
 create function public.claim_scheduled_remote_ok_sources(p_batch_size integer default 3)
 returns table (
-  source_id uuid,
+  claimed_source_id uuid,
   owner_id uuid,
   source_config jsonb,
   skills text[],

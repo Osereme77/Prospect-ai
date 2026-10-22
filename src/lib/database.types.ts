@@ -82,7 +82,7 @@ export type Database = {
       admin_discovery_usage: { Args: Record<PropertyKey, never>; Returns: { month_start: string; total_requests: number; active_accounts: number }[] }
       admin_queue_health: { Args: Record<PropertyKey, never>; Returns: { queued_count: number; oldest_queued_at: string | null; stale_sending_count: number; failed_count: number }[] }
       reserve_discovery_slot: { Args: { p_owner: string; p_run_id: string; p_owner_monthly_limit: number; p_global_monthly_limit: number }; Returns: boolean }
-      claim_scheduled_remote_ok_sources: { Args: { p_batch_size?: number }; Returns: { source_id: string; owner_id: string; source_config: Json; skills: string[]; services: string[]; markets: string[]; notification_threshold: number }[] }
+      claim_scheduled_remote_ok_sources: { Args: { p_batch_size?: number }; Returns: { claimed_source_id: string; owner_id: string; source_config: Json; skills: string[]; services: string[]; markets: string[]; notification_threshold: number }[] }
       finish_scheduled_remote_ok_source: { Args: { p_source_id: string; p_success: boolean; p_error_code?: string | null }; Returns: boolean }
       persist_scheduled_remote_ok_results: { Args: { p_owner: string; p_source_id: string; p_run_id: string; p_results: Json }; Returns: number }
     }
