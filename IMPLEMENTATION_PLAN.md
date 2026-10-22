@@ -3,7 +3,7 @@
 **Status:** Implementation in progress; see [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for delivered code and open live-service gates.
 **Baseline:** Product Requirements Document v1.0  
 **Repository:** Prospect-ai, with implementation work on the ui-test branch  
-**Current state:** The core React/Supabase application, ten versioned migrations, authenticated discovery function with a Remote OK public job-feed adapter, phase documentation, and CI workflow are implemented on `ui-test`. The development Supabase project has the migrations applied and the updated discovery function deployed. Source approval, live provider acceptance, hosting, scheduling, and release checks remain open.
+**Current state:** The core React/Supabase application, eleven versioned migrations, authenticated discovery function with a Remote OK public job-feed adapter, phase documentation, and CI workflow are implemented on `ui-test`. Migrations 001–010 and the updated discovery function are deployed to the development Supabase project; migration 011 is in `ui-test` and passes the disposable-database CI suite but still needs applying to the development project. Netlify production is reachable but serves an older build; the `ui-test` branch deploy is not enabled yet. Source approval, live provider acceptance, branch preview, scheduling, and release checks remain open.
 
 ## 1. Objective and delivery principles
 
