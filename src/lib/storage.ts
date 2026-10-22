@@ -1,8 +1,8 @@
 import type { AppNotification, Lead, ProspectProfile, SearchRun } from '../types'
-import { initialProfile, seedLeads } from '../data'
-import { tryStorageWrite } from './storageWrite'
+import { initialProfile, seedLeads } from '../data.ts'
+import { tryStorageWrite } from './storageWrite.ts'
 const L='prospect-ai.leads.v1',P='prospect-ai.profile.v1',N='prospect-ai.notices.v1',R='prospect-ai.runs.v1'
-export { tryStorageWrite } from './storageWrite'
+export { tryStorageWrite } from './storageWrite.ts'
 const write=(key:string,value:string)=>tryStorageWrite(()=>localStorage.setItem(key,value))
 export function readLeads():Lead[]{try{const r=localStorage.getItem(L);return r?JSON.parse(r) as Lead[]:seedLeads}catch{return seedLeads}}
 export function saveLeads(x:Lead[]){return write(L,JSON.stringify(x))}

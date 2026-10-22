@@ -12,6 +12,8 @@ Remy Prospect AI is a personal, evidence-led workspace for finding and managing 
 - Supabase PostgreSQL migration for profiles, roles, sources, runs, leads, evidence, explainable score history, notifications, email outbox, and audit logs with row-level security.
 - Fit-score contract uses relevance (35%), evidence of need (25%), budget signals (15%), freshness (15%), and source confidence (10%). Unknown budgets remain unknown and must not be treated as zero fit.
 
+The `ui-test` branch includes an optional GitHub Pages deployment for a manual-only preview. It builds without Supabase credentials: sign-in, cloud sync, discovery, AI, email, and scheduled jobs are not part of that preview. Leads and profile data stay in the current browser's local storage and do not sync or back up. Enable GitHub Pages with **Settings → Pages → Source: GitHub Actions** before the first deployment. The expected URL is `https://osereme77.github.io/Prospect-ai/`.
+
 **Sample records are illustrative synthetic examples.** Their `example.com` URLs are placeholders, not real opportunities. Replace or remove them before making decisions based on the data.
 
 Supabase Auth and cloud sync are implemented for configured projects; the Auth email and redirect settings still need to be checked for each environment. Automated discovery remains disabled until the owner reviews the source terms, approves it in Settings, and a server operator enables its flag and cap. Remote page fetching, external AI research, scheduled jobs, and email delivery are not active. The app does not claim to have run discovery. There is no automatic job application or unsolicited outreach.

@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "build:pages": "tsc -b && vite build --base=/Prospect-ai/",
     "preview": "vite preview",
     "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
