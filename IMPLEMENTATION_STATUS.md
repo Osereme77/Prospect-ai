@@ -36,4 +36,8 @@ No live Supabase, Brave, Resend, or hosting credentials have been added to the r
 ## 2026-10-22 browser workflow coverage
 
 - Added a Playwright end-to-end test and CI job for creating a manual opportunity, saving it, and retrieving it after a page reload. The runner explicitly clears Supabase environment variables so the test covers the local browser-storage workflow without connecting to project data.
-- Playwright discovers the test locally, but this managed Windows environment timed out while launching Chromium. The Linux CI job will provide the browser execution result.
+- Playwright discovers the test locally, but this managed Windows environment timed out while launching Chromium. GitHub Actions run [39769970385](https://github.com/Osereme77/Prospect-ai/actions/runs/39769970385) on `ui-test` completed the browser E2E and frontend verification jobs successfully; the database job was still running at the latest check.
+
+## 2026-10-22 hosted deployment recheck
+
+- After the user redeployed Netlify, the public site still served asset `/assets/index-auuehihc.js`, which does not contain the Supabase project URL or Auth screen. The authenticated build is not yet live at the production URL. The `main` branch remains at `40f7d5d8fc2d7ad2fbea7f639a9ab1809cd06e40`; `ui-test` has the newer implementation. Deploy a preview from `ui-test` for hosted auth verification, or move the branch to production only when ready to release.
