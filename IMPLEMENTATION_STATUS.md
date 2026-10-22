@@ -29,6 +29,11 @@ No live Supabase, Brave, Resend, or hosting credentials have been added to the r
 - `https://jobsremyai.netlify.app` serves the application shell with HTTP 200, but its current JavaScript bundle does not contain the linked Supabase project URL or Auth screen. Local `.env.local` values have not been applied to the hosted build.
 - Configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in Netlify's build environment, configure the Supabase Auth site/redirect URLs for the hosted origin, and redeploy before testing hosted sign-in. The setup is documented in [README.md](README.md).
 
+## 2026-10-22 Auth endpoint preflight
+
+- A read-only request to the linked Supabase Auth settings endpoint succeeded using the locally configured publishable key. Email authentication and sign-up are enabled; email autoconfirm is off, so users must verify their email.
+- The public settings response did not expose the site URL or redirect allowlist. The app uses the current page origin in sign-up and password-recovery links; allow both the `ui-test` preview and production origins before hosted Auth acceptance.
+
 ## 2026-10-22 CI recheck
 
 - Historical run [39763732553](https://github.com/Osereme77/Prospect-ai/actions/runs/39763732553) exposed pgTAP failures that were fixed in a later commit; the current 25-assertion suite passes in run [39777067927](https://github.com/Osereme77/Prospect-ai/actions/runs/39777067927).
