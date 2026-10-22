@@ -58,6 +58,17 @@ test('public URL validation rejects credentials, private hosts, and non-web prot
   assert.equal(canonicalPublicUrl('file:///etc/passwd'), null)
 })
 
+test('public URL validation normalizes host trailing dots and blocks alternate private IP forms', () => {
+  assert.equal(canonicalPublicUrl('https://LOCALHOST./admin'), null)
+  assert.equal(canonicalPublicUrl('https://localhost../admin'), null)
+  assert.equal(canonicalPublicUrl('https://service.internal./admin'), null)
+  assert.equal(canonicalPublicUrl('http://10.0.0.1./admin'), null)
+  assert.equal(canonicalPublicUrl('http://2130706433/admin'), null)
+  assert.equal(canonicalPublicUrl('http://0x7f000001/admin'), null)
+  assert.equal(canonicalPublicUrl('http://[::1]/admin'), null)
+  assert.equal(canonicalPublicUrl('https://Example.com./jobs/'), 'https://example.com/jobs')
+})
+
 test('CSV export quotes commas, quotes, and newlines without losing fields', () => {
   const csv = leadsToCsv([{id:'1',kind:'Opportunity',title:'Senior "React", engineer',organization:'A,B',status:'New',score:80,scoreReason:'reason\nnext',source:'manual',url:'https://example.com',location:'Remote',tags:['React','Node'],evidence:[],summary:'line 1\nline 2',createdAt:'2026-10-20T00:00:00.000Z'}])
   assert.match(csv, /"Senior ""React"", engineer"/)

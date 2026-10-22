@@ -1,3 +1,5 @@
+import { safePublicUrl } from './publicUrl.ts'
+
 export interface DiscoveryRequest {
   query: string
   country: string
@@ -92,15 +94,4 @@ export function normalizeBraveResults(payload: unknown): DiscoveryResult[] {
   })
 }
 
-export function safePublicUrl(value: unknown): string | null {
-  if (typeof value !== 'string' || value.length > 2048) return null
-  try {
-    const url = new URL(value)
-    const host = url.hostname.toLowerCase()
-    if (!['https:', 'http:'].includes(url.protocol) || !host.includes('.') || url.username || url.password) return null
-    if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) return null
-    if (/^(0|10|127|169\.254|192\.168)\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host) || /^100\.(6[4-9]|[7-9]\d|1[01]\d|12[0-7])\./.test(host)) return null
-    if (/^(224|23[0-9]|24\d|25[0-5])\./.test(host) || host === '0.0.0.0' || host.includes(':')) return null
-    return url.toString()
-  } catch { return null }
-}
+export { safePublicUrl }
