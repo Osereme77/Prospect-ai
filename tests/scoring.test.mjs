@@ -9,6 +9,7 @@ import { buildSuggestedQuery } from '../src/lib/query.ts'
 import { createEvidenceItem, scoreEvidenceChanges, setEvidenceReview } from '../src/lib/evidence.ts'
 import { countFollowUpsDue, isFollowUpDue } from '../src/lib/followups.ts'
 import { effectiveSourceRequestLimits } from '../supabase/functions/_shared/sourcePolicy.ts'
+import { scheduledRemoteOkPayload } from '../supabase/functions/_shared/scheduledDiscovery.ts'
 import { reviewPublicPage } from '../src/lib/research.ts'
 import { notificationEmail, retryAt } from '../supabase/functions/_shared/emailOutbox.ts'
 
@@ -206,4 +207,19 @@ test('source approval keeps owner and provider-wide monthly caps separate', () =
   assert.equal(effectiveSourceRequestLimits(true,{...config,monthly_limit:0},20,now),null)
   assert.equal(effectiveSourceRequestLimits(true,{monthly_limit:7,terms_reviewed_at:config.terms_reviewed_at},20,now),null)
   assert.deepEqual(effectiveSourceRequestLimits(true,{monthly_limit:7,terms_reviewed_at:config.terms_reviewed_at},20,now,false),{ownerMonthlyLimit:7,globalMonthlyLimit:20})
+})
+
+test('scheduled Remote OK results are bounded, attributed, and scored without inventing verified facts', () => {
+  const results = scheduledRemoteOkPayload([
+    { title: 'React contract developer', organization: 'Example Ltd', url: 'https://remoteok.com/remote-jobs/123', snippet: 'Build a React dashboard', source: 'Remote OK' },
+    { title: 'Unsafe source', organization: 'Attacker', url: 'https://evil.example/jobs/1', snippet: 'React role', source: 'Remote OK' },
+    { title: 'Unsafe protocol', organization: 'Example Ltd', url: 'http://remoteok.com/remote-jobs/124', snippet: 'React role', source: 'Remote OK' },
+  ], { skills: ['React'], services: ['Web development'] })
+
+  assert.equal(results.length, 1)
+  assert.equal(results[0].url, 'https://remoteok.com/remote-jobs/123')
+  assert.equal(results[0].relevance, 50)
+  assert.equal(results[0].need_evidence, 55)
+  assert.match(results[0].score_reason, /budget unknown/)
+  assert.ok(results[0].score >= 0 && results[0].score <= 100)
 })

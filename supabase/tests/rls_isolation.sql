@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select extensions.plan(35);
+select extensions.plan(51);
 
 insert into auth.users (
   instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -22,6 +22,14 @@ insert into public.search_runs(id,owner_id,query,idempotency_key) values
 
 insert into public.leads(id,owner_id,kind,title,organization)
 values ('c3333333-3333-4333-8333-333333333333','a1111111-1111-4111-8111-111111111111','opportunity','Owner A lead','Example');
+
+insert into public.discovery_sources(id,owner_id,name,kind,enabled,config)
+values ('d5555555-5555-4555-8555-555555555555','a1111111-1111-4111-8111-111111111111','Remote OK','public_feed',true,
+  '{"monthly_limit":5,"terms_reviewed_at":"2026-10-20T10:00:00Z","scheduled_enabled":true}');
+insert into public.search_runs(id,owner_id,source_id,query,status,idempotency_key)
+values
+  ('e4444444-4444-4444-8444-444444444444','a1111111-1111-4111-8111-111111111111','d5555555-5555-4555-8555-555555555555','React developer','running','scheduled-test-valid'),
+  ('e5555555-5555-4555-8555-555555555555','a1111111-1111-4111-8111-111111111111','d5555555-5555-4555-8555-555555555555','React developer','running','scheduled-test-invalid');
 
 set local role anon;
 select extensions.lives_ok(
@@ -45,6 +53,14 @@ select extensions.throws_ok(
 select extensions.throws_ok(
   $$select public.sync_workspace(null,'[]'::jsonb,'[]'::jsonb,'[]'::jsonb)$$,
   '42501',null,'anonymous requests cannot save a workspace'
+);
+select extensions.throws_ok(
+  $$select public.claim_scheduled_remote_ok_sources(1)$$,
+  '42501',null,'anonymous requests cannot claim scheduled discovery'
+);
+select extensions.throws_ok(
+  $$select public.persist_scheduled_remote_ok_results('a1111111-1111-4111-8111-111111111111','d5555555-5555-4555-8555-555555555555','e4444444-4444-4444-8444-444444444444','[]'::jsonb)$$,
+  '42501',null,'anonymous requests cannot persist scheduled results'
 );
 reset role;
 set local role authenticated;
@@ -141,10 +157,39 @@ select extensions.ok(not public.reserve_discovery_slot('a1111111-1111-4111-8111-
 select extensions.ok(public.reserve_discovery_slot('b2222222-2222-4222-8222-222222222222','f1111111-1111-4111-8111-111111111111',2,100),'second account can reserve under account cap');
 select extensions.ok(public.reserve_discovery_slot('b2222222-2222-4222-8222-222222222222','f2222222-2222-4222-8222-222222222222',2,100),'second account can use its remaining slot');
 select extensions.ok(not public.reserve_discovery_slot('b2222222-2222-4222-8222-222222222222','f3333333-3333-4333-8333-333333333333',2,100),'per-account cap blocks excess requests');
+select extensions.is((select count(*) from public.claim_scheduled_remote_ok_sources(3)),1::bigint,'service role claims only the opted-in Remote OK source');
+select extensions.is((select count(*) from public.scheduled_discovery_state where source_id='d5555555-5555-4555-8555-555555555555' and locked_until > now()),1::bigint,'scheduled source receives an active lease');
+select extensions.is(public.persist_scheduled_remote_ok_results(
+  'a1111111-1111-4111-8111-111111111111','d5555555-5555-4555-8555-555555555555','e4444444-4444-4444-8444-444444444444',
+  '[{"url":"https://remoteok.com/remote-jobs/123","title":"React contract developer","organization":"Example Ltd","snippet":"Build a React dashboard","score":69,"score_reason":"Skill/service overlap 1/2; need signal has unverified source evidence; budget unknown; freshness unverified.","relevance":50,"need_evidence":55,"budget_signals":50,"freshness":50,"source_confidence":55}]'::jsonb
+),1,'scheduled results are stored atomically for the source owner');
+select extensions.is((select count(*) from public.leads where owner_id='a1111111-1111-4111-8111-111111111111' and source_url='https://remoteok.com/remote-jobs/123'),1::bigint,'scheduled persistence creates one lead');
+select extensions.is((select count(*) from public.lead_evidence where source_url='https://remoteok.com/remote-jobs/123' and verification_status='unverified'),1::bigint,'scheduled persistence stores unverified linked evidence');
+select extensions.is((select count(*) from public.lead_scores where lead_id=(select id from public.leads where source_url='https://remoteok.com/remote-jobs/123')),1::bigint,'scheduled persistence stores score history');
+select extensions.is((select count(*) from public.notifications where lead_id=(select id from public.leads where source_url='https://remoteok.com/remote-jobs/123') and kind='lead_match'),1::bigint,'qualifying scheduled lead creates one persistent alert');
+select extensions.is(public.persist_scheduled_remote_ok_results(
+  'a1111111-1111-4111-8111-111111111111','d5555555-5555-4555-8555-555555555555','e4444444-4444-4444-8444-444444444444',
+  '[{"url":"https://remoteok.com/remote-jobs/123","title":"React contract developer","organization":"Example Ltd","snippet":"Build a React dashboard","score":69,"score_reason":"Skill/service overlap 1/2; need signal has unverified source evidence; budget unknown; freshness unverified.","relevance":50,"need_evidence":55,"budget_signals":50,"freshness":50,"source_confidence":55}]'::jsonb
+),0,'repeated scheduled persistence skips a duplicate source URL');
+select extensions.throws_ok(
+  $$select public.persist_scheduled_remote_ok_results('a1111111-1111-4111-8111-111111111111','d5555555-5555-4555-8555-555555555555','e5555555-5555-4555-8555-555555555555','[{"url":"https://attacker.example/job","title":"Unsafe","organization":"Example","snippet":"Details","score":70,"score_reason":"x","relevance":50,"need_evidence":55,"budget_signals":50,"freshness":50,"source_confidence":55}]'::jsonb)$$,
+  '22023',null,'scheduled persistence rejects URLs outside Remote OK'
+);
+select extensions.is((select count(*) from public.leads where source_url='https://attacker.example/job'),0::bigint,'invalid scheduled result batch leaves no partial lead');
+select extensions.ok(public.finish_scheduled_remote_ok_source('d5555555-5555-4555-8555-555555555555',true,null),'service role can finish a scheduled source run');
+select extensions.is((select count(*) from public.scheduled_discovery_state where source_id='d5555555-5555-4555-8555-555555555555' and locked_until is null and consecutive_failures=0),1::bigint,'successful scheduled source run releases its lease and resets retries');
 reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','b2222222-2222-4222-8222-222222222222',true);
 update public.leads set title='Changed by B' where id='c3333333-3333-4333-8333-333333333333';
+select extensions.throws_ok(
+  $$select public.claim_scheduled_remote_ok_sources(1)$$,
+  '42501',null,'ordinary users cannot claim scheduled discovery'
+);
+select extensions.throws_ok(
+  $$select public.persist_scheduled_remote_ok_results('a1111111-1111-4111-8111-111111111111','d5555555-5555-4555-8555-555555555555','e4444444-4444-4444-8444-444444444444','[]'::jsonb)$$,
+  '42501',null,'ordinary users cannot persist scheduled results'
+);
 reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a1111111-1111-4111-8111-111111111111',true);

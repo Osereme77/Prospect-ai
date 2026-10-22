@@ -45,6 +45,7 @@ export type Database = {
         [Relation<'search_runs_source_id_fkey', ['source_id'], 'discovery_sources', ['id']>]
       >
       discovery_reservations: Table<{ run_id: string; owner_id: string; reserved_at: string }, { run_id: string; owner_id: string; reserved_at?: string }>
+      scheduled_discovery_state: Table<{ source_id: string; next_run_at: string; locked_until: string | null; consecutive_failures: number; last_run_at: string | null; last_error_code: string | null }, { source_id: string; next_run_at?: string; locked_until?: string | null; consecutive_failures?: number; last_run_at?: string | null; last_error_code?: string | null }>
       leads: Table<
         Lead,
         { id?: string; owner_id: string; kind: Lead['kind']; title: string; organization: string; source_url?: string | null; location?: string | null; summary?: string; status?: Lead['status']; budget_signal?: string | null; contact_availability?: Lead['contact_availability']; follow_up_at?: string | null; notes?: string; duplicate_of?: string | null; source_label?: string; tags?: string[]; posted_label?: string; score?: number; score_reason?: string; search_run_id?: string | null; source_id?: string | null; discovered_at?: string | null; research_gaps?: string[]; created_at?: string; updated_at?: string },
@@ -81,6 +82,9 @@ export type Database = {
       admin_discovery_usage: { Args: Record<PropertyKey, never>; Returns: { month_start: string; total_requests: number; active_accounts: number }[] }
       admin_queue_health: { Args: Record<PropertyKey, never>; Returns: { queued_count: number; oldest_queued_at: string | null; stale_sending_count: number; failed_count: number }[] }
       reserve_discovery_slot: { Args: { p_owner: string; p_run_id: string; p_owner_monthly_limit: number; p_global_monthly_limit: number }; Returns: boolean }
+      claim_scheduled_remote_ok_sources: { Args: { p_batch_size?: number }; Returns: { source_id: string; owner_id: string; source_config: Json; skills: string[]; services: string[]; markets: string[]; notification_threshold: number }[] }
+      finish_scheduled_remote_ok_source: { Args: { p_source_id: string; p_success: boolean; p_error_code?: string | null }; Returns: boolean }
+      persist_scheduled_remote_ok_results: { Args: { p_owner: string; p_source_id: string; p_run_id: string; p_results: Json }; Returns: number }
     }
     Enums: {
       lead_kind: 'opportunity' | 'company'

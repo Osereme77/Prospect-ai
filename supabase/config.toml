@@ -6,3 +6,6 @@ verify_jwt = true
 
 [functions.dispatch-notification-email]
 verify_jwt = true
+
+[functions.scheduled-discovery]
+verify_jwt = true
