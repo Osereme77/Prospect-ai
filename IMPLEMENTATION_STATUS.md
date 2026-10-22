@@ -23,3 +23,8 @@ No live Supabase, Brave, Resend, or hosting credentials have been added to the r
 - Added five focused tests covering successful session restoration, recoverable lookup errors, and auth-event precedence over late success or failure.
 - Verification after the change: `npm test` passed 35/35; `npm run build` passed. Vite reports the existing 524 KB JavaScript chunk-size warning.
 - Database verification remains open: the local workstation has no Supabase CLI or Docker command available, and the hosted pgTAP failure log has not been retrieved. The RLS suite declares 24 assertions.
+
+## 2026-10-22 hosted Netlify inspection
+
+- `https://jobsremyai.netlify.app` serves the application shell with HTTP 200, but its current JavaScript bundle does not contain the linked Supabase project URL or Auth screen. Local `.env.local` values have not been applied to the hosted build.
+- Configure `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in Netlify's build environment, configure the Supabase Auth site/redirect URLs for the hosted origin, and redeploy before testing hosted sign-in. The setup is documented in [README.md](README.md).
