@@ -121,7 +121,7 @@ select extensions.lives_ok(
     begin
       perform public.sync_workspace(
         null,
-        '[{"id":"c3333333-3333-4333-8333-333333333333","kind":"opportunity","title":"Changed by B","organization":"Example","status":"new"}]'::jsonb,
+        '[{"id":"c3333333-3333-4333-8333-333333333333","kind":"opportunity","title":"Changed by B","organization":"Example","source_url":null,"location":null,"summary":"","status":"new","budget_signal":null,"contact_availability":"unknown","follow_up_at":null,"notes":"","duplicate_of":null,"source_label":"Saved prospect","source_id":null,"search_run_id":null,"tags":[],"research_gaps":[],"posted_label":"Saved prospect","score":50,"score_reason":"Score not calculated yet."}]'::jsonb,
         '[]'::jsonb,
         '[]'::jsonb
       );
