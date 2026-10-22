@@ -30,7 +30,7 @@ Requests reserve quota before calling a provider. A failed provider request does
 3. Delivery requires all four server values: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, and `EMAIL_FROM`, plus `OUTBOX_WORKER_SECRET`. The recipient is looked up from Supabase Auth and is sent mail only when the profile has opted in and the address is verified.
 4. A `sending` row locked for more than 15 minutes can be reclaimed by the next worker invocation. Automatic delivery is bounded to five attempts. Provider timeouts, HTTP 5xx, and HTTP 429 responses are retried; most other HTTP 4xx responses are terminal. Resend requests reuse the outbox idempotency key.
 5. Fix the sender, account, or provider problem before retrying. An admin can use **Retry** on a failed row; the database function audits the action, resets the attempt counter, and preserves the original notification/idempotency identity. Do not retry an unverified or opted-out recipient; those rows are terminal until the owner resolves eligibility.
-6. If repeated failures occur, stop the scheduler, correct the cause, then resume it and watch the next bounded batch in **Admin**. No schedule or queue-age alert is currently configured by this repository.
+6. If repeated failures occur, stop the scheduler, correct the cause, then resume it and watch the next bounded batch in **Admin**. The Admin page warns when the oldest queued item has waited at least 15 minutes, a sending lock is stale, or deliveries have failed. These checks run when an administrator opens or refreshes the page; no external scheduler heartbeat or out-of-band alert is configured.
 
 ## Database and deployment safety
 

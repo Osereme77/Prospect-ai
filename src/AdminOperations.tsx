@@ -7,6 +7,7 @@ import {
   setAdminDiscoverySourceEnabled,
   type AdminOperationsData,
 } from './lib/repository'
+import { getQueueHealthAlerts } from './lib/operations'
 
 export default function AdminOperations({ user, notify }: { user: User; notify: (message: string) => void }) {
   const [data, setData] = useState<AdminOperationsData | null>(null)
@@ -57,13 +58,14 @@ export default function AdminOperations({ user, notify }: { user: User; notify: 
   if (!data) return <section className="panel admin-ops" role="status"><ShieldCheck /><h1>Admin access required</h1><p>This account does not have an administrative role.</p></section>
 
   const currentMonth = data.usage[0]
+  const queueAlerts = getQueueHealthAlerts(data.queueHealth)
   const stats = [
     ['Sources', data.sources.length],
     ['Search runs', data.runs.length],
     ['Requests this month', currentMonth?.total_requests ?? 0],
     ['Accounts active this month', currentMonth?.active_accounts ?? 0],
-    ['Queued email', data.outbox.filter(item => item.status === 'queued').length],
-    ['Failed email', data.outbox.filter(item => item.status === 'failed').length],
+    ['Queued email', data.queueHealth.queued_count],
+    ['Failed email', data.queueHealth.failed_count],
   ] as const
 
   return <>
@@ -72,8 +74,12 @@ export default function AdminOperations({ user, notify }: { user: User; notify: 
     <p className="subtitle">Review discovery usage, sources, runs, email delivery, and audit events.</p>
     <button className="secondary admin-refresh" onClick={() => setRefresh(value => value + 1)}><RefreshCw size={15} /> Refresh operational data</button>
     <div className="stats admin-stats">
-      {stats.map(([label, value]) => <div className="stat" key={label}><span>{label}</span><Activity size={17} /><b>{value}</b><small>{label.includes('this month') || label.includes('active this month') ? 'Current calendar month' : 'Latest 50 records where applicable'}</small></div>)}
+      {stats.map(([label, value]) => <div className="stat" key={label}><span>{label}</span><Activity size={17} /><b>{value}</b><small>{label.includes('this month') || label.includes('active this month') ? 'Current calendar month' : label.includes('email') ? 'Across the full queue' : 'Latest 50 records where applicable'}</small></div>)}
     </div>
+    {queueAlerts.length > 0 && <section className="cloud-error admin-queue-alert" role="alert" aria-label="Email queue needs attention">
+      <b>Email queue needs attention</b>
+      <ul>{queueAlerts.map(alert => <li key={alert}>{alert}</li>)}</ul>
+    </section>}
 
     <section className="panel admin-panel">
       <h2>Monthly discovery usage</h2>

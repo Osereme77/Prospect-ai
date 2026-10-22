@@ -1,5 +1,6 @@
 import type { User } from '@supabase/supabase-js'
 import type { AppNotification, DiscoverySource, EvidenceItem, Lead, LeadStatus, ProspectProfile, SearchRun } from '../types'
+import type { AdminQueueHealth } from './operations'
 import { supabase } from './supabase'
 
 const dbStatus = (status: LeadStatus): Lowercase<LeadStatus> => status.toLowerCase() as Lowercase<LeadStatus>
@@ -141,6 +142,7 @@ export interface AdminOperationsData {
   outbox: { id:string; owner_id:string; status:string; attempts:number; last_error_code:string|null; created_at:string; next_attempt_at:string; sent_at:string|null }[]
   audit: { id:string; actor_id:string|null; action:string; entity_type:string; entity_id:string|null; created_at:string }[]
   usage: { month_start:string; total_requests:number; active_accounts:number }[]
+  queueHealth: AdminQueueHealth
 }
 
 export async function loadAdminOperations(_user:User):Promise<AdminOperationsData|null>{
@@ -148,15 +150,20 @@ export async function loadAdminOperations(_user:User):Promise<AdminOperationsDat
   const {data:allowed,error:roleError}=await supabase.rpc('is_admin')
   if(roleError)throw roleError
   if(!allowed)return null
-  const [sources,runs,outbox,audit,usage]=await Promise.all([
+  const [sources,runs,outbox,audit,usage,queueHealth]=await Promise.all([
     supabase.from('discovery_sources').select('id,name,enabled,owner_id,kind,created_at').order('created_at',{ascending:false}).limit(50),
     supabase.from('search_runs').select('id,owner_id,query,status,result_count,created_at,error_summary').order('created_at',{ascending:false}).limit(50),
     supabase.from('outbox').select('id,owner_id,status,attempts,last_error_code,created_at,next_attempt_at,sent_at').order('created_at',{ascending:false}).limit(50),
     supabase.from('audit_logs').select('id,actor_id,action,entity_type,entity_id,created_at').order('created_at',{ascending:false}).limit(50),
     supabase.rpc('admin_discovery_usage'),
+    supabase.rpc('admin_queue_health'),
   ])
-  for(const result of [sources,runs,outbox,audit,usage])if(result.error)throw result.error
-  return {sources:sources.data??[],runs:runs.data??[],outbox:outbox.data??[],audit:audit.data??[],usage:usage.data??[]}
+  for(const result of [sources,runs,outbox,audit,usage,queueHealth])if(result.error)throw result.error
+  const health = queueHealth.data?.[0]
+  return {
+    sources:sources.data??[], runs:runs.data??[], outbox:outbox.data??[], audit:audit.data??[], usage:usage.data??[],
+    queueHealth: health ?? { queued_count: 0, oldest_queued_at: null, stale_sending_count: 0, failed_count: 0 },
+  }
 }
 
 export async function requeueFailedNotification(id:string){

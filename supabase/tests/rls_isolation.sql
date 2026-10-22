@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select extensions.plan(25);
+select extensions.plan(27);
 
 insert into auth.users (
   instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -10,6 +10,7 @@ insert into auth.users (
 ) values
   ('00000000-0000-0000-0000-000000000000','a1111111-1111-4111-8111-111111111111','authenticated','authenticated','rls-owner-a@example.invalid','',now(),'{}','{}',now(),now()),
   ('00000000-0000-0000-0000-000000000000','b2222222-2222-4222-8222-222222222222','authenticated','authenticated','rls-owner-b@example.invalid','',now(),'{}','{}',now(),now());
+update public.user_roles set role='super_admin' where user_id='a1111111-1111-4111-8111-111111111111';
 
 insert into public.search_runs(id,owner_id,query,idempotency_key) values
   ('e1111111-1111-4111-8111-111111111111','a1111111-1111-4111-8111-111111111111','quota a 1','quota-a-1'),
@@ -103,6 +104,10 @@ select extensions.throws_ok(
   '42501',null,'ordinary users cannot inspect aggregate discovery usage'
 );
 select extensions.throws_ok(
+  $$select * from public.admin_queue_health()$$,
+  '42501',null,'ordinary users cannot inspect email queue health'
+);
+select extensions.throws_ok(
   $$select public.reserve_discovery_slot('b2222222-2222-4222-8222-222222222222','f1111111-1111-4111-8111-111111111111',10000,1000000)$$,
   '42501',null,'ordinary users cannot reserve discovery quota directly'
 );
@@ -123,6 +128,7 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a1111111-1111-4111-8111-111111111111',true);
 select extensions.is((select title from public.leads where id='c3333333-3333-4333-8333-333333333333'),'Owner A lead','owner A lead remains unchanged after owner B update attempt');
+select extensions.is((select queued_count::integer from public.admin_queue_health()),2,'admin queue health reports both opted-in owner A notifications');
 
 select * from extensions.finish();
 rollback;
