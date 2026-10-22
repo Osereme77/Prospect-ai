@@ -20,3 +20,19 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm test
       - run: npm run build
+
+  database:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: supabase/setup-cli@v3
+      - run: supabase start
+      - run: supabase db reset --local
+      - run: supabase db lint --local --fail-on error
+      - run: supabase test db --local
+      - run: supabase stop
+        if: always()
