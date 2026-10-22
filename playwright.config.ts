@@ -22,6 +22,14 @@ export default defineConfig({
       testMatch: 'auth.spec.ts',
       use: { baseURL: 'http://127.0.0.1:4174' },
     },
+    {
+      name: 'mobile-workspace',
+      testMatch: 'mobile.spec.ts',
+      use: {
+        baseURL: 'http://127.0.0.1:4173',
+        viewport: { width: 375, height: 812 },
+      },
+    },
   ],
   webServer: [
     {

@@ -42,6 +42,10 @@ No live Supabase, Brave, Resend, or hosting credentials have been added to the r
 
 - Added a Playwright browser test that starts the app with dummy Supabase configuration and verifies an unauthenticated visitor sees the sign-in screen without the private workspace. This checks the client auth gate; database authorization remains covered by pgTAP and is not proven by this browser test. GitHub Actions run [39771538460](https://github.com/Osereme77/Prospect-ai/actions/runs/39771538460) confirms both browser tests pass; database reset and lint pass, while the pgTAP step still fails.
 
+## 2026-10-22 mobile browser check
+
+- Added a third Playwright check for mobile navigation focus, Escape dismissal, and horizontal overflow at 375 px. The test is discovered locally and awaits its GitHub browser run; unit tests and the production build remain green from the preceding verification.
+
 ## 2026-10-22 hosted deployment recheck
 
 - After the user redeployed Netlify, the public site still served asset `/assets/index-auuehihc.js`, which does not contain the Supabase project URL or Auth screen. The authenticated build is not yet live at the production URL. The `main` branch remains at `40f7d5d8fc2d7ad2fbea7f639a9ab1809cd06e40`; `ui-test` has the newer implementation. Deploy a preview from `ui-test` for hosted auth verification, or move the branch to production only when ready to release.
