@@ -103,6 +103,12 @@ No live Supabase, Brave, Resend, or hosting secret values are stored in the repo
 - Confirmed the linked project is `pugvqkytxutnfucisurl`; the dry run showed only migration 013 pending. Applied `202610200013_scheduled_discovery.sql` and rechecked that migrations 001–013 match remotely.
 - Deployed `scheduled-discovery` to the development Supabase project; Supabase reports it `ACTIVE` with `verify_jwt=true`. It remains dormant: no `SCHEDULED_DISCOVERY_SECRET`, cron job, or provider enablement was configured. No live browser-closed source run has been claimed or tested.
 - Commits `80feddf`, `f11be5f`, and `e0ad2e2` are on `ui-test`; no push targeted `main`.
+
+## 2026-10-22 hosted runtime access check
+
+- The public production URL `https://jobsremyai.netlify.app` currently opens in local browser-storage mode with synthetic sample prospects and no sign-in gate. It does not verify the current authenticated/cloud build.
+- The `ui-test` URL redirects to Netlify's “This site is private” Team Protection screen and requires an invited Netlify account. The branch preview could not be used to verify hosted Auth or cloud lead creation/retrieval.
+- No Netlify access setting was changed. Removing Team Protection would expose the preview publicly; decide whether to make the preview public or keep it restricted and invite the intended reviewers. After access is resolved, repeat hosted sign-in, lead create/retrieve, and two-user isolation checks.
 - `npm test` passes 43/43; `npm run build` passes with the existing 524.88 KB chunk warning. A full rendered screen-reader and visual review still requires owner acceptance.
 
 ## 2026-10-22 final neutral-label contrast pass
