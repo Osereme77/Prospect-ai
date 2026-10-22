@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select extensions.plan(33);
+select extensions.plan(35);
 
 insert into auth.users (
   instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -115,6 +115,23 @@ select extensions.throws_ok(
   $$select public.reserve_discovery_slot('b2222222-2222-4222-8222-222222222222','f1111111-1111-4111-8111-111111111111',10000,1000000)$$,
   '42501',null,'ordinary users cannot reserve discovery quota directly'
 );
+select extensions.lives_ok(
+  $query$
+    do $assert$
+    begin
+      perform public.sync_workspace(
+        null,
+        '[{"id":"c3333333-3333-4333-8333-333333333333","kind":"opportunity","title":"Changed by B","organization":"Example","status":"new"}]'::jsonb,
+        '[]'::jsonb,
+        '[]'::jsonb
+      );
+    exception when insufficient_privilege then
+      null;
+    end
+    $assert$;
+  $query$,
+  'owner B cannot overwrite owner A through the workspace save RPC'
+);
 reset role;
 set local role service_role;
 select set_config('request.jwt.claim.role','service_role',true);
@@ -132,6 +149,7 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a1111111-1111-4111-8111-111111111111',true);
 select extensions.is((select title from public.leads where id='c3333333-3333-4333-8333-333333333333'),'Owner A lead','owner A lead remains unchanged after owner B update attempt');
+select extensions.is((select title from public.leads where id='c3333333-3333-4333-8333-333333333333'),'Owner A lead','owner A lead remains unchanged after owner B workspace save attempt');
 select extensions.is((select queued_count::integer from public.admin_queue_health()),2,'admin queue health reports both opted-in owner A notifications');
 select extensions.throws_ok(
   $$select public.sync_workspace(
