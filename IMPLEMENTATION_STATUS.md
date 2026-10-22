@@ -48,7 +48,7 @@ No live Supabase, Brave, Resend, or hosting credentials have been added to the r
 
 ## 2026-10-22 database failure diagnostics
 
-- Updated the CI database step to publish the final 60 lines of pgTAP output into the run summary only when the test step fails. This should expose the assertion/SQL diagnostic on the next run; it runs against disposable local database fixtures and adds no secrets or hosted project data.
+- Updated the CI database step to publish the final 60 lines of pgTAP output into the run summary and emit annotations for the final 12 output lines when the test step fails. The first run still reported the database failure but its public job page did not expose the summary excerpt. The next run should surface diagnostic lines as check annotations; the test uses only the disposable local database and fixtures.
 
 ## 2026-10-22 hosted deployment recheck
 

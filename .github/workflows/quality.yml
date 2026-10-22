@@ -57,6 +57,10 @@ jobs:
               tail -n 60 supabase-db-test.log
               echo '```'
             } >> "$GITHUB_STEP_SUMMARY"
+            tail -n 12 supabase-db-test.log | while IFS= read -r diagnostic; do
+              diagnostic=${diagnostic//$'\r'/}
+              echo "::error title=pgTAP output::$diagnostic"
+            done
           fi
           exit "$test_status"
         shell: bash
