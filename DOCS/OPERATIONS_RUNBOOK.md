@@ -34,7 +34,7 @@ Requests reserve quota before calling a provider. A failed provider request does
 
 ## Scheduled discovery heartbeat
 
-The `scheduled-discovery` Edge Function writes only aggregate start/finish status, bounded claimed/completed/failed counts, and a fixed error code to the service-only `scheduled_worker_health` table. Admins read this through `admin_scheduled_worker_health()`; ordinary authenticated users and anonymous clients cannot read or write the table. The Admin screen warns when no run has completed, a run remains active for 15 minutes, a run failed, or no run completed in 36 hours. A recent heartbeat confirms that the endpoint ran; it does not establish source permission, data quality, or provider success for every claimed account. The heartbeat requires migration 014 and is not operational until that migration and function build are deployed and the operator scheduler is configured.
+The `scheduled-discovery` Edge Function writes only aggregate start/finish status, bounded claimed/completed/failed counts, and a fixed error code to the service-only `scheduled_worker_health` table. Migrations 014 and the updated function are deployed to development. Admins read this through `admin_scheduled_worker_health()`; ordinary authenticated users and anonymous clients cannot read or write the table. The Admin screen warns when no run has completed, a run remains active for 15 minutes, a run failed, or no run completed in 36 hours. A recent heartbeat confirms that the endpoint ran; it does not establish source permission, data quality, or provider success for every claimed account. The operator scheduler is not configured; migration and function deployment alone do not activate it.
 
 ## Database and deployment safety
 
