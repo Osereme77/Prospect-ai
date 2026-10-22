@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select extensions.plan(24);
+select extensions.plan(25);
 
 insert into auth.users (
   instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -23,9 +23,19 @@ insert into public.leads(id,owner_id,kind,title,organization)
 values ('c3333333-3333-4333-8333-333333333333','a1111111-1111-4111-8111-111111111111','opportunity','Owner A lead','Example');
 
 set local role anon;
-select extensions.throws_ok(
-  $$select * from public.leads$$,
-  '42501',null,'anonymous requests cannot read private leads'
+select extensions.lives_ok(
+  $query$
+    do $assert$
+    begin
+      if exists(select 1 from public.leads) then
+        raise exception 'anonymous requests can read private leads';
+      end if;
+    exception when insufficient_privilege then
+      null;
+    end
+    $assert$;
+  $query$,
+  'anonymous requests cannot read private leads'
 );
 select extensions.throws_ok(
   $$select public.reserve_discovery_slot('a1111111-1111-4111-8111-111111111111','e1111111-1111-4111-8111-111111111111',100,100)$$,
@@ -63,12 +73,26 @@ select extensions.throws_ok(
   '42501',null,'owner B cannot insert a lead for owner A'
 );
 select extensions.throws_ok(
-  $$update public.user_roles set role='super_admin' where user_id='b2222222-2222-4222-8222-222222222222'$$,
-  '42501',null,'ordinary users cannot grant themselves a privileged role'
-);
-select extensions.throws_ok(
   $$select public.admin_retry_notification_outbox('d4444444-4444-4444-8444-444444444444')$$,
   '42501',null,'ordinary users cannot retry notification delivery'
+);
+select extensions.lives_ok(
+  $query$
+    do $assert$
+    begin
+      update public.user_roles set role='super_admin'
+      where user_id='b2222222-2222-4222-8222-222222222222';
+    exception when insufficient_privilege then
+      null;
+    end
+    $assert$;
+  $query$,
+  'ordinary users cannot grant themselves a privileged role'
+);
+select extensions.is(
+  (select role from public.user_roles where user_id='b2222222-2222-4222-8222-222222222222'),
+  'user',
+  'ordinary user role remains unchanged after escalation attempt'
 );
 select extensions.throws_ok(
   $$select public.admin_set_discovery_source_enabled('d4444444-4444-4444-8444-444444444444',true)$$,
