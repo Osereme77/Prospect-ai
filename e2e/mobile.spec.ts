@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test'
 test('mobile navigation supports keyboard dismissal without horizontal overflow', async ({ page }) => {
   await page.goto('/')
 
-  const toggle = page.getByRole('button', { name: 'Open navigation' })
+  const toggle = page.locator('.mobile-toggle')
   await expect(toggle).toHaveAttribute('aria-expanded', 'false')
   await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toHaveCount(0)
 
@@ -14,7 +14,8 @@ test('mobile navigation supports keyboard dismissal without horizontal overflow'
   await expect(navigation.getByRole('button', { name: 'Overview' })).toBeFocused()
 
   await page.keyboard.press('Escape')
-  await expect(page.getByRole('button', { name: 'Open navigation' })).toBeFocused()
+  await expect(toggle).toHaveAttribute('aria-label', 'Open navigation')
+  await expect(toggle).toBeFocused()
   await expect(page.getByRole('navigation', { name: 'Primary navigation' })).toHaveCount(0)
 
   const pageWidth = await page.evaluate(() => document.documentElement.scrollWidth)

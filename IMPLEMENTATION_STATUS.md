@@ -44,7 +44,7 @@ No live Supabase, Brave, Resend, or hosting credentials have been added to the r
 
 ## 2026-10-22 mobile browser check
 
-- Added a third Playwright check for mobile navigation focus, Escape dismissal, and horizontal overflow at 375 px. The test is discovered locally, but its first GitHub browser run failed at `npm run test:e2e`; the public check annotation only exposed the generic step exit code. CI now uses Playwright's GitHub reporter so the next run can attach test-level failure details.
+- Added a third Playwright check for mobile navigation focus, Escape dismissal, and horizontal overflow at 375 px. Its first GitHub run showed the test kept querying the toggle by its old accessible name after the app correctly changed it from “Open navigation” to “Close navigation.” The test now locates the stable toggle element and checks its updated accessible name after Escape. CI uses Playwright's GitHub reporter for failure annotations.
 
 ## 2026-10-22 hosted deployment recheck
 
