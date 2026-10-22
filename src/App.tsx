@@ -15,6 +15,7 @@ import { createEvidenceItem, scoreEvidenceChanges, setEvidenceReview } from './l
 import { reviewPublicPage, type PublicResearchResult } from './lib/research'
 import { summarizeWorkspace } from './lib/dashboard'
 import { countFollowUpsDue } from './lib/followups'
+import { dialogTabWrapTarget } from './lib/dialogFocus'
 import AdminOperations from './AdminOperations'
 
 interface AppProps { user?: User; onSignOut?: () => Promise<void> }
@@ -37,10 +38,10 @@ function useDialogKeyboard(open:boolean,selector:string,onClose:()=>void,canClos
   const onKeyDown=(event:KeyboardEvent)=>{
    if(event.key==='Escape'){if(canCloseRef.current){event.preventDefault();closeRef.current()}return}
    if(event.key!=='Tab')return
-   const items=focusable(),first=items[0],last=items[items.length-1]
-   if(!first){event.preventDefault();dialog.focus();return}
-   if(event.shiftKey&&(document.activeElement===first||!dialog.contains(document.activeElement))){event.preventDefault();last?.focus()}
-   else if(!event.shiftKey&&(document.activeElement===last||!dialog.contains(document.activeElement))){event.preventDefault();first.focus()}
+   const items=focusable()
+   if(!items.length){event.preventDefault();dialog.focus();return}
+   const target=dialogTabWrapTarget(document.activeElement,items,event.shiftKey,dialog)
+   if(target){event.preventDefault();target.focus()}
   }
   dialog.addEventListener('keydown',onKeyDown)
   const initial=focusable()[0]

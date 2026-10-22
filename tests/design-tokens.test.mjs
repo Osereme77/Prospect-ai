@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import test from 'node:test'
+import { dialogTabWrapTarget } from '../src/lib/dialogFocus.ts'
 
 const css = await readFile(new URL('../src/styles/tokens.css', import.meta.url), 'utf8')
 const app = await readFile(new URL('../src/App.tsx', import.meta.url), 'utf8')
@@ -45,4 +46,17 @@ test('links opened in new tabs prevent access to the opener window', () => {
   const links = [...app.matchAll(/<a\b[^>]*target="_blank"[^>]*>/g)].map(([tag]) => tag)
   assert.ok(links.length > 0, 'expected external links that open in a new tab')
   for (const link of links) assert.match(link, /\brel="[^"]*(?:noopener|noreferrer)[^"]*"/)
+})
+
+test('dialog keyboard navigation wraps at both ends and leaves middle focus alone', () => {
+  const first = { focus() {} }, middle = { focus() {} }, last = { focus() {} }
+  const members = new Set([first, middle, last])
+  const dialog = { contains: node => members.has(node) }
+  const focusable = [first, middle, last]
+  assert.equal(dialogTabWrapTarget(first, focusable, true, dialog), last)
+  assert.equal(dialogTabWrapTarget(last, focusable, false, dialog), first)
+  assert.equal(dialogTabWrapTarget(middle, focusable, false, dialog), undefined)
+  assert.equal(dialogTabWrapTarget(null, focusable, true, dialog), last)
+  assert.equal(dialogTabWrapTarget(null, focusable, false, dialog), first)
+  assert.equal(dialogTabWrapTarget(first, [], false, dialog), undefined)
 })
