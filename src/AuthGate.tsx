@@ -4,6 +4,7 @@ import type { Session } from '@supabase/supabase-js'
 import { ArrowLeft, LoaderCircle, LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
 import App from './App'
 import { supabase, supabaseConfigured, supabaseConfigError } from './lib/supabase'
+import { restoreInitialSession } from './lib/authSession'
 
 type Mode = 'sign_in' | 'sign_up' | 'recovery' | 'update_password'
 export default function AuthGate() {
@@ -17,25 +18,20 @@ export default function AuthGate() {
   const [email, setEmail] = useState('')
 
   useEffect(() => {
-    if (!supabase) return
+    const client = supabase
+    if (!client) return
     let alive = true
     let authEventReceived = false
-    supabase.auth.getSession().then(({ data, error }) => {
+    restoreInitialSession(() => client.auth.getSession(), () => authEventReceived).then((result) => {
       if (!alive) return
-      if (!authEventReceived) {
-        setSession(data.session)
-        if (error) setError('Could not restore the saved sign-in session. You can try signing in again.')
-      }
-      setReady(true)
-    }).catch(() => {
-      if (!alive) return
-      if (!authEventReceived) {
+      if (result.kind === 'restored') setSession(result.session)
+      if (result.kind === 'unavailable') {
         setSession(null)
         setError('Could not restore the saved sign-in session. You can try signing in again.')
       }
       setReady(true)
     })
-    const { data: listener } = supabase.auth.onAuthStateChange((event, next) => {
+    const { data: listener } = client.auth.onAuthStateChange((event, next) => {
       if (!alive) return
       authEventReceived = true
       setSession(next); setReady(true)

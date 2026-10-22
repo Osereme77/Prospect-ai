@@ -20,5 +20,6 @@ No live Supabase, Brave, Resend, or hosting credentials have been added to the r
 ## 2026-10-22 auth recovery follow-up
 
 - `AuthGate` now exits the session-loading state when Supabase session restoration returns an error or rejects, showing a recoverable sign-in message. An auth event takes precedence over a later `getSession()` result to avoid overwriting a refreshed session.
-- Verification after the change: `npm test` passed 30/30; `npm run build` passed. Vite reports the existing 524 KB JavaScript chunk-size warning.
+- Added five focused tests covering successful session restoration, recoverable lookup errors, and auth-event precedence over late success or failure.
+- Verification after the change: `npm test` passed 35/35; `npm run build` passed. Vite reports the existing 524 KB JavaScript chunk-size warning.
 - Database verification remains open: the local workstation has no Supabase CLI or Docker command available, and the hosted pgTAP failure log has not been retrieved. The RLS suite declares 24 assertions.
