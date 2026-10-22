@@ -53,7 +53,7 @@ Without Supabase values the app uses local browser storage. With Supabase values
 - Save original public URLs and distinguish observed evidence from hypotheses and missing information.
 - Never invent contact details, budgets, requirements, or hiring intent.
 - User review is required before any external contact; application submission and unsolicited outreach are not automated.
-- External requests and provider credentials belong on trusted server-side functions. Add URL allow-list/SSRF protections, rate limits, audit events, idempotency, retries, and per-user quotas before enabling automated intake.
+- External requests and provider credentials belong on trusted server-side functions. Provider adapters use fixed endpoints, and public URL validation rejects local/private hosts and alternate loopback notation. Remote page fetching remains disabled; any future fetcher must add DNS-aware SSRF checks, safe redirect handling, bounded responses, rate limits, audit events, idempotency, retries, and per-user quotas before enabling automated intake.
 
 ## Quality checks
 

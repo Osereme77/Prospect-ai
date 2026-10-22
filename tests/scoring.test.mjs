@@ -76,6 +76,16 @@ test('CSV export quotes commas, quotes, and newlines without losing fields', () 
   assert.match(csv, /"reason\nnext"/)
 })
 
+test('CSV export neutralizes spreadsheet formulas in untrusted text but keeps numeric scores', () => {
+  const csv=leadsToCsv([{id:'1',kind:'Opportunity',title:'=HYPERLINK("https://attacker.invalid")',organization:' +SUM(1,1)',status:'New',score:-1,scoreReason:'@cmd',source:'manual',url:'https://example.com',location:'\t=1+1',tags:[],evidence:[],summary:'-2+3',notes:'safe',createdAt:'2026-10-20T00:00:00.000Z'}])
+  assert.match(csv, /"'=HYPERLINK\(""https:\/\/attacker\.invalid""\)"/)
+  assert.match(csv, /"' \+SUM\(1\,1\)"/)
+  assert.match(csv, /"'@cmd"/)
+  assert.match(csv, /"'\t=1\+1"/)
+  assert.match(csv, /"'\-2\+3"/)
+  assert.match(csv, /,"-1",/)
+})
+
 const filterSample = (overrides = {}) => ({id:'lead-1',kind:'Opportunity',title:'React workflow engineer',organization:'Example Labs',url:'https://example.com/job',location:'Lagos, Nigeria',postedAt:'Today',summary:'Build a React and Node workflow',status:'New',score:82,scoreReason:'reason',source:'Company site',tags:['React','TypeScript'],evidence:[],budget:'Not disclosed',createdAt:'2026-10-19T12:00:00.000Z',...overrides})
 
 test('lead filters compose across status, score, source, service, location, and budget knowledge', () => {

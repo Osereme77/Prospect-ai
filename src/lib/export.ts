@@ -1,7 +1,11 @@
 import type { Lead } from '../types'
 
 const headers = ['id','kind','title','organization','status','score','score_reason','source','source_url','location','budget','follow_up','duplicate_of','tags','evidence','summary','notes','created_at']
-const cell = (value:unknown) => `"${String(value??'').replace(/"/g,'""')}"`
+const cell = (value:unknown) => {
+  const text=String(value??'')
+  const safe=typeof value!=='number'&&/^[\t\r\n ]*[=+@-]/.test(text)?`'${text}`:text
+  return `"${safe.replace(/"/g,'""')}"`
+}
 
 export function leadsToCsv(leads:Lead[]) {
   const rows = leads.map(lead => [lead.id,lead.kind,lead.title,lead.organization,lead.status,lead.score,lead.scoreReason,lead.source,lead.url,lead.location,lead.budget,lead.followUp,lead.duplicateOf,lead.tags.join('; '),lead.evidence.join('; '),lead.summary,lead.notes,lead.createdAt])
