@@ -68,3 +68,9 @@ test('dialog keyboard navigation wraps at both ends and leaves middle focus alon
   assert.equal(dialogTabWrapTarget(null, focusable, false, dialog), first)
   assert.equal(dialogTabWrapTarget(first, [], false, dialog), undefined)
 })
+
+test('mobile navigation exposes its state and supports keyboard dismissal', () => {
+  assert.match(app, /aria-controls="primary-navigation" aria-expanded=\{mobile\}/)
+  assert.match(app, /aria-label="Primary navigation" aria-hidden=\{smallScreen&&!mobile\} inert=\{smallScreen&&!mobile\}/)
+  assert.match(app, /if\(event\.key==='Escape'\)\{setMobile\(false\);navToggleRef\.current\?\.focus\(\)\}/)
+})
