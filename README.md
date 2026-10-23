@@ -75,6 +75,7 @@ npm run build
 
 See [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md) for the phased delivery plan and [DOCS/PROSPECT PRD.pdf](DOCS/PROSPECT%20PRD.pdf) for the full product requirements.
 See [IMPLEMENTATION_STATUS.md](IMPLEMENTATION_STATUS.md) for what is implemented and which account-specific setup steps remain.
+See [DOCS/RISK_REGISTER.md](DOCS/RISK_REGISTER.md) for active deployment, provider, authorization, and release risks with closure evidence.
 See [DOCS/ARCHITECTURE.md](DOCS/ARCHITECTURE.md) for the architecture diagram, data model, environment boundaries, and deferred integrations.
 See [DOCS/UX_FLOWS.md](DOCS/UX_FLOWS.md) for the main journeys, low-fidelity layouts, and owner review checklist.
 See [DOCS/OPERATIONS_RUNBOOK.md](DOCS/OPERATIONS_RUNBOOK.md) for current discovery/email triage and recovery procedures.
