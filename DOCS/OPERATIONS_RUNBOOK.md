@@ -6,7 +6,7 @@ This runbook describes the current development implementation. It is not evidenc
 
 1. To stop future discovery globally, set the relevant Edge Function secret to `REMOTE_OK_ENABLED=false` and/or `BRAVE_SEARCH_ENABLED=false`. The server rejects disabled providers before making a request.
 2. An admin can pause an individual registered source in **Admin → Discovery sources**. An owner can also disable their source approval in **Settings**. These controls are separate from the global server flags.
-3. To stop email delivery, disable the scheduler invocation if one has been configured. The worker also fails closed when `OUTBOX_WORKER_SECRET`, `RESEND_API_KEY`, or `EMAIL_FROM` is missing.
+3. To stop email delivery, disable the scheduler invocation if one has been configured. The worker fails closed when `OUTBOX_WORKER_SECRET`, both Resend key names (`RESEND_API_KEY` and the backward-compatible `Resend_Api`), or `EMAIL_FROM` is missing.
 4. If a secret may have been exposed, rotate it in Supabase and in the invoking scheduler. Do not paste secrets into issue reports, chat, browser code, or database logs.
 
 ## Triage a discovery run
@@ -27,7 +27,7 @@ Requests reserve quota before calling a provider. A failed provider request does
 
 1. Open **Admin → Notification delivery** and inspect status, attempt count, and the bounded `last_error_code`.
 2. The worker accepts only server-to-server `POST` requests carrying `x-worker-secret`. It claims at most 20 outbox rows per invocation. Never call it from browser code or expose its secret to the frontend.
-3. Delivery requires all four server values: `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `RESEND_API_KEY`, and `EMAIL_FROM`, plus `OUTBOX_WORKER_SECRET`. The recipient is looked up from Supabase Auth and is sent mail only when the profile has opted in and the address is verified.
+3. Delivery requires `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, either `RESEND_API_KEY` or the backward-compatible `Resend_Api`, `EMAIL_FROM`, and `OUTBOX_WORKER_SECRET`. The existing development key is stored as `Resend_Api`; do not add another key under a duplicate name. Verify a sender domain you control with Resend, then use a sender address on that domain for `EMAIL_FROM`. The recipient is looked up from Supabase Auth and is sent mail only when the profile has opted in and the address is verified.
 4. A `sending` row locked for more than 15 minutes can be reclaimed by the next worker invocation. Automatic delivery is bounded to five attempts. Provider timeouts, HTTP 5xx, and HTTP 429 responses are retried; most other HTTP 4xx responses are terminal. Resend requests reuse the outbox idempotency key.
 5. Fix the sender, account, or provider problem before retrying. An admin can use **Retry** on a failed row; the database function audits the action, resets the attempt counter, and preserves the original notification/idempotency identity. Do not retry an unverified or opted-out recipient; those rows are terminal until the owner resolves eligibility.
 6. If repeated failures occur, stop the scheduler, correct the cause, then resume it and watch the next bounded batch in **Admin**. The Admin page warns when the oldest queued item has waited at least 15 minutes, a sending lock is stale, or deliveries have failed. These checks run when an administrator opens or refreshes the page; no external scheduler heartbeat or out-of-band alert is configured.
