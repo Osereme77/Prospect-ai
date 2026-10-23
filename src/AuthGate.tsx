@@ -12,13 +12,15 @@ type Mode = 'sign_in' | 'sign_up' | 'recovery' | 'update_password'
 function isPasswordRecoveryReturn() {
   const query = new URLSearchParams(window.location.search)
   const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
-  return query.get('auth') === 'recovery' || query.get('type') === 'recovery' || hash.get('type') === 'recovery'
+  const hasAuthError = ['error', 'error_code', 'error_description'].some(key => query.has(key) || hash.has(key))
+  return query.get('auth') === 'recovery' || query.get('type') === 'recovery' || hash.get('type') === 'recovery' || hasAuthError
 }
 
 function clearPasswordRecoveryMarker() {
   const url = new URL(window.location.href)
   url.searchParams.delete('auth')
   if (url.searchParams.get('type') === 'recovery') url.searchParams.delete('type')
+  for (const key of ['error', 'error_code', 'error_description']) url.searchParams.delete(key)
   url.hash = ''
   window.history.replaceState({}, '', `${url.pathname}${url.search}`)
 }

@@ -1,7 +1,7 @@
 import { expect, test } from '@playwright/test'
 
 test('keeps an unauthenticated visitor on the sign-in screen', async ({ page }) => {
-  await page.goto('/')
+  await page.goto('/', { waitUntil: 'commit' })
 
   await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Your prospecting command centre' })).toHaveCount(0)
@@ -16,13 +16,13 @@ test('resends email confirmation without revealing whether an account exists', a
     await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   })
 
-  await page.goto('/')
+  await page.goto('/', { waitUntil: 'commit' })
   await page.getByLabel('Email address').fill('owner@example.test')
   await page.getByRole('button', { name: 'Resend confirmation' }).click()
 
   await expect(page.getByRole('status')).toHaveText('If an unconfirmed account matches that address, a confirmation email has been sent.')
   expect(requestBody).toMatchObject({ type: 'signup', email: 'owner@example.test' })
-  expect(new URL(requestUrl).searchParams.get('redirect_to')).toBe('http://127.0.0.1:4174')
+  expect(new URL(requestUrl).searchParams.get('redirect_to')).toBe('http://127.0.0.1:4175')
 })
 
 test('handles confirmation email rate limits without echoing the email address', async ({ page }) => {
@@ -34,7 +34,7 @@ test('handles confirmation email rate limits without echoing the email address',
     })
   })
 
-  await page.goto('/')
+  await page.goto('/', { waitUntil: 'commit' })
   await page.getByLabel('Email address').fill('private-address@example.test')
   await page.getByRole('button', { name: 'Resend confirmation' }).click()
 
@@ -50,19 +50,23 @@ test('returns password reset emails to a protected password update screen', asyn
     await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
   })
 
-  await page.goto('/')
+  await page.goto('/', { waitUntil: 'commit' })
   await page.getByRole('button', { name: 'Forgot password?' }).click()
   await page.getByLabel('Email address').fill('owner@example.test')
   await page.getByRole('button', { name: 'Send reset link' }).click()
 
   await expect(page.getByRole('status')).toHaveText('If the address belongs to an account, a password reset link is on its way.')
   const recoveryUrl = new URL(redirectTo)
-  expect(recoveryUrl.origin).toBe('http://127.0.0.1:4174')
+  expect(recoveryUrl.origin).toBe('http://127.0.0.1:4175')
   expect(recoveryUrl.searchParams.get('auth')).toBe('recovery')
 
-  await page.goto('/?auth=recovery')
+  await page.goto('/?auth=recovery', { waitUntil: 'commit' })
   await expect(page.getByRole('heading', { name: 'Password reset link unavailable' })).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Your prospecting command centre' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Request a new link' }).click()
   await expect(page.getByRole('heading', { name: 'Reset your password' })).toBeVisible()
+
+  await page.goto('/?error_code=otp_expired', { waitUntil: 'commit' })
+  await expect(page.getByRole('heading', { name: 'Password reset link unavailable' })).toBeVisible({ timeout: 15_000 })
+  await expect(page.getByRole('heading', { name: 'Your prospecting command centre' })).toHaveCount(0)
 })

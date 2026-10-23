@@ -20,7 +20,7 @@ export default defineConfig({
     {
       name: 'auth-gate',
       testMatch: 'auth.spec.ts',
-      use: { baseURL: 'http://127.0.0.1:4174' },
+      use: { baseURL: 'http://127.0.0.1:4175' },
     },
     {
       name: 'mobile-workspace',
@@ -44,9 +44,9 @@ export default defineConfig({
       },
     },
     {
-      command: 'npm run dev -- --host 127.0.0.1 --port 4174 --strictPort',
-      url: 'http://127.0.0.1:4174',
-      reuseExistingServer: !process.env.CI,
+      command: 'npm run dev -- --host 127.0.0.1 --port 4175 --strictPort',
+      url: 'http://127.0.0.1:4175',
+      reuseExistingServer: false,
       timeout: 60_000,
       env: {
         VITE_SUPABASE_URL: 'https://auth-gate-test.supabase.co',
