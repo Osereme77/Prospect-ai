@@ -2,7 +2,7 @@
 create extension if not exists pgtap with schema extensions;
 
 begin;
-select extensions.plan(55);
+select extensions.plan(59);
 
 insert into auth.users (
   instance_id,id,aud,role,email,encrypted_password,email_confirmed_at,
@@ -70,6 +70,19 @@ reset role;
 set local role authenticated;
 select set_config('request.jwt.claim.sub','a1111111-1111-4111-8111-111111111111',true);
 select extensions.is((select count(*)::integer from public.leads),1,'owner A can read their lead');
+update public.discovery_sources
+set config=jsonb_set(config,'{terms_reviewed_at}','"2026-10-21T10:00:00Z"'::jsonb)
+where id='d5555555-5555-4555-8555-555555555555';
+select extensions.is(
+  (select count(*)::integer from public.audit_logs where actor_id='a1111111-1111-4111-8111-111111111111' and action='discovery_source.updated' and entity_id='d5555555-5555-4555-8555-555555555555'),
+  1,'owner source approval changes create an audit event'
+);
+select extensions.ok(public.admin_set_discovery_source_enabled('d5555555-5555-4555-8555-555555555555',false),'admin can pause a registered source');
+select extensions.ok(public.admin_set_discovery_source_enabled('d5555555-5555-4555-8555-555555555555',true),'admin can resume a registered source');
+select extensions.is(
+  (select count(*)::integer from public.audit_logs where actor_id='a1111111-1111-4111-8111-111111111111' and action='discovery_source.updated' and entity_id='d5555555-5555-4555-8555-555555555555'),
+  3,'admin source state changes are each audited once'
+);
 select extensions.is((select contact_availability from public.leads where id='c3333333-3333-4333-8333-333333333333'),'unknown','new leads default contact availability to unknown');
 select extensions.throws_ok(
   $$update public.leads set contact_availability='private_details' where id='c3333333-3333-4333-8333-333333333333'$$,
