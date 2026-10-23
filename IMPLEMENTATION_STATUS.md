@@ -267,3 +267,9 @@ No live Supabase, Brave, Resend, or hosting secret values are stored in the repo
 - Remote OK is a global feed; the run-history label now records “Remote · Global” instead of implying the selected market filters its results.
 - Added unit coverage for mapped errors, suppression of arbitrary server detail, and result-save failures. `npm test` passed 51/51; `npm run build` passed (446.67 KB entry bundle); `git diff --check` passed.
 - Still requires one authenticated hosted search after restoring the missing owner source row. Its run record will establish whether the deployed global provider setting and cap are configured.
+
+## 2026-10-23 Local desktop and mobile browser check
+
+- `npm run test:e2e -- --project=local-storage --project=mobile-workspace` was attempted after the discovery fix. Both tests failed locally because the page remained on the Suspense “Loading workspace…” screen: manual lead creation timed out waiting for “Add prospect,” and mobile navigation controls never rendered. The saved Playwright traces show HTTP 200 for the app modules and no browser console error, so the local cause is unresolved; this does not establish a hosted production defect.
+- The test runner then hung during teardown and was stopped. Do not count this as passing browser verification. The latest previously observed GitHub Actions run passed E2E on commit `aa8f7e8`; a run for `0beb6bd` has not been verified with available GitHub CLI/browser access.
+- Local unit tests passed 51/51 and `npm run build` passed for the current code. The authenticated hosted Remote OK retry remains outstanding because browser controls timed out and the Supabase CLI has no dashboard access token.
