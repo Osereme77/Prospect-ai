@@ -192,3 +192,9 @@ No live Supabase, Brave, Resend, or hosting secret values are stored in the repo
 - Commit `33ff146` is pushed to `origin/ui-test`; the working tree is clean and `main` was not changed.
 - GitHub Actions run [39907690062](https://github.com/Osereme77/Prospect-ai/actions/runs/39907690062) completed successfully for verify, all three browser E2E checks, database reset/lint, and 55 pgTAP assertions. Local `npm test` passed 48/48 and `npm run build` passed.
 - The `ui-test` URL remains protected from signed-out requests. The authenticated preview screen and cloud create/retrieve flow have not been observed in the owner's permitted session; a successful build or CI run does not prove hosted Auth acceptance.
+
+## 2026-10-23 Supabase URL configuration recovery
+
+- The owner reports the preview shows `Account setup needs attention` with `Failed to construct 'URL': Invalid URL`. This indicates the configured project URL is malformed; it is not an API-key error.
+- Runtime setup now explains where to copy the project API URL. Netlify builds reject malformed URLs and dashboard paths before publishing. The README documents the linked development project URL without including any secret.
+- Local verification: `npm test` passed 48/48, `npm run build` passed, and a Netlify-mode build using the dashboard URL was rejected with a targeted configuration message. The owner still needs to edit the existing `VITE_SUPABASE_URL` entry in Netlify and redeploy before hosted Auth can be checked.
