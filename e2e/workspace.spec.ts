@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { readFile } from 'node:fs/promises'
 
 test('creates, retrieves, and safely deletes a manual opportunity', async ({ page }) => {
   const title = `E2E prospect ${Date.now()}`
@@ -22,11 +23,26 @@ test('creates, retrieves, and safely deletes a manual opportunity', async ({ pag
   await expect(page.getByText(title, { exact: true }).first()).toBeVisible()
 
   await page.getByRole('button', { name: /Opportunities/ }).click()
+  const downloadPromise = page.waitForEvent('download')
+  await page.getByRole('button', { name: 'Export CSV' }).click()
+  const download = await downloadPromise
+  expect(download.suggestedFilename()).toBe('prospect-ai-opportunities.csv')
+  const exportPath = await download.path()
+  expect(exportPath).not.toBeNull()
+  const csv = await readFile(exportPath!, 'utf8')
+  expect(csv).toContain(title)
+  expect(csv).toContain('https://example.com/jobs/e2e-prospect')
+
   await page.getByRole('button', { name: new RegExp(title) }).click()
   const detail = page.getByRole('dialog')
   await expect(detail).toBeVisible()
   await expect(detail.getByRole('heading', { name: title })).toBeVisible()
   await expect(detail).toHaveAccessibleName(title)
+  await expect(detail.getByText('Why this score')).toBeVisible()
+  await expect(detail.getByText('Relevance', { exact: true })).toBeVisible()
+  await expect(detail.getByText('Evidence of need', { exact: true })).toBeVisible()
+  await expect(detail.getByText('Source confidence', { exact: true })).toBeVisible()
+
   let cancelMessage = ''
   page.once('dialog', async dialog => {
     cancelMessage = dialog.message()
