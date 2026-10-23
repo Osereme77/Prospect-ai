@@ -1,10 +1,11 @@
-import { useEffect, useState } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
 import { ArrowLeft, LoaderCircle, LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
-import App from './App'
 import { supabase, supabaseConfigured, supabaseConfigError } from './lib/supabase'
 import { restoreInitialSession } from './lib/authSession'
+
+const App = lazy(() => import('./App'))
 
 type Mode = 'sign_in' | 'sign_up' | 'recovery' | 'update_password'
 export default function AuthGate() {
@@ -64,10 +65,10 @@ export default function AuthGate() {
     finally { setBusy(false) }
   }
 
-  if (!supabaseConfigured) return <App />
+  if (!supabaseConfigured) return <Suspense fallback={<div className="auth-loading" role="status">Loading workspace…</div>}><App /></Suspense>
   if (!supabase) return <main className="auth-screen"><section className="auth-card"><div className="auth-icon"><LockKeyhole size={20}/></div><h1>Account setup needs attention</h1><p>{supabaseConfigError || 'Check VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.local.'}</p></section></main>
   if (!ready) return <div className="auth-loading"><LoaderCircle className="spin"/> Checking your secure session…</div>
-  if (session?.user && mode !== 'update_password') return <App user={session.user} onSignOut={async () => { await supabase?.auth.signOut() }} />
+  if (session?.user && mode !== 'update_password') return <Suspense fallback={<div className="auth-loading" role="status">Loading workspace…</div>}><App user={session.user} onSignOut={async () => { await supabase?.auth.signOut() }} /></Suspense>
 
   const titles: Record<Mode, string> = { sign_in: 'Welcome back', sign_up: 'Create your account', recovery: 'Reset your password', update_password: 'Choose a new password' }
   return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><span className="brand-mark">✦</span> prospect<span>.ai</span></div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>{titles[mode]}</h1><p className="auth-intro">{mode === 'sign_up' ? 'Set up your private prospecting workspace.' : mode === 'recovery' ? 'We’ll send a secure reset link if the account exists.' : mode === 'update_password' ? 'Use a new password for your account.' : 'Sign in to your private prospecting workspace.'}</p>
