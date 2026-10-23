@@ -142,3 +142,9 @@ No live Supabase, Brave, Resend, or hosting secret values are stored in the repo
 - `AuthGate` lazy-loads the workspace after the sign-in decision, and the Admin operations view loads only when opened. The workspace and Admin code are separate chunks; the production entry bundle is 443.83 KB (127.04 KB gzip), down from 528.75 KB, with no Vite chunk-size warning.
 - `npm test` passed 47/47; `npm run build` passed. GitHub Actions run [39877753785](https://github.com/Osereme77/Prospect-ai/actions/runs/39877753785) passed the verify, E2E, and database jobs, including all 55 pgTAP assertions.
 - A separate local Windows Playwright run failed with page setup/navigation timeouts and a persistent “Loading workspace…” fallback. Trace network snapshots show HTTP 200 responses for the app modules. Do not count that local run as passing; the matching pushed commit's Linux CI E2E job passed.
+
+## 2026-10-23 hosted endpoint check
+
+- A read-only request to `https://jobsremyai.netlify.app/` returned HTTP 200. Inspecting its published JavaScript confirmed it contains the workspace UI but not the linked Supabase project URL or sign-in UI; that production deployment is still serving local browser-storage mode.
+- The `ui-test` URL `https://ui-test--jobsremyai.netlify.app/` returned HTTP 401 to an unauthenticated request, consistent with Netlify Team Protection. Its built Auth configuration and authenticated lead workflow remain unverified until checked from the owner's permitted Netlify session.
+- No deployment settings or protection controls were changed. No Netlify CLI, site ID, or access token is available in this workspace.
