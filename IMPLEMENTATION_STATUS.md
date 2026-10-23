@@ -161,3 +161,9 @@ No live Supabase, Brave, Resend, or hosting secret values are stored in the repo
 
 - Rechecked the primary Remote OK FAQ/terms and Brave Search pricing, billing help, and Search API terms. The Remote OK feed FAQ describes the public JSON feed as free and requests prominent credit plus original job links; the UI provides those links. Brave's currently listed Search tier costs $5 per 1,000 requests, includes $5 monthly credits, and requires payment details to activate; the default terms prohibit storing/caching Search Results except transiently. Brave persistence therefore remains disabled pending separate written storage rights and owner cost approval.
 - Corrected the architecture and scheduler ADR to state that scheduled discovery is deployed to development but dormant until operator setup, and clarified that live email deployment/configuration remains unverified. The README and provider ADR now document the current Brave price and retention restriction.
+
+## 2026-10-23 Netlify deployment follow-up
+
+- The owner reports completing the Netlify deployment. A read-only signed-out request to `https://ui-test--jobsremyai.netlify.app/` returned HTTP 401, consistent with Netlify Team Protection. The current deployment therefore cannot be inspected anonymously.
+- Local browser access is disabled in this workspace, so the deployed sign-in screen, Auth redirect, and authenticated cloud lead workflow remain unverified. No environment values or access settings were changed. Continue verification from the owner's permitted Netlify session; do not infer successful hosted Auth solely from a successful deploy.
+- The repository remains on `ui-test`; production stays on `main` pending acceptance and release approval.
