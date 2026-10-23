@@ -168,6 +168,12 @@ No live Supabase, Brave, Resend, or hosting secret values are stored in the repo
 - Local browser access is disabled in this workspace, so the deployed sign-in screen, Auth redirect, and authenticated cloud lead workflow remain unverified. No environment values or access settings were changed. Continue verification from the owner's permitted Netlify session; do not infer successful hosted Auth solely from a successful deploy.
 - The repository remains on `ui-test`; production stays on `main` pending acceptance and release approval.
 
+## 2026-10-23 latest branch verification
+
+- The public GitHub Actions run for commit `182a921` completed successfully: `verify`, all three Playwright E2E checks, database reset/lint, and pgTAP passed. The branch is pushed to `origin/ui-test`; `main` was not changed.
+- Rechecked the development Supabase secret inventory by names only. `Resend_Api` is still present; `EMAIL_FROM`, `OUTBOX_WORKER_SECRET`, and `SCHEDULED_DISCOVERY_SECRET` are absent. No secret values were read for this check. Email and scheduled discovery remain inactive until their respective configuration and approvals are complete.
+- The latest ui-test preview remains Team-Protected to signed-out requests (HTTP 401). The owner must verify the sign-in screen and cloud lead workflow from a permitted browser session; a deployment or green CI result does not prove hosted Auth behavior.
+
 ## 2026-10-23 Resend secret compatibility
 
 - Updated the server-side email worker to read the canonical `RESEND_API_KEY` or the `Resend_Api` secret name previously found in the Supabase secret inventory. The key stays server-side and is not returned in function responses or logs.
