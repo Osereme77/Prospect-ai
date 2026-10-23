@@ -4,6 +4,7 @@ const baseURL = 'http://127.0.0.1:4173'
 
 export default defineConfig({
   testDir: './e2e',
+  timeout: process.env.CI ? 30_000 : 60_000,
   fullyParallel: false,
   workers: process.env.CI ? 1 : undefined,
   reporter: process.env.CI ? 'github' : 'list',

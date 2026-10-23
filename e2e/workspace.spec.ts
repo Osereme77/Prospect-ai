@@ -42,15 +42,27 @@ test('creates, retrieves, and safely deletes a manual opportunity', async ({ pag
   await expect(detail.getByText('Relevance', { exact: true })).toBeVisible()
   await expect(detail.getByText('Evidence of need', { exact: true })).toBeVisible()
   await expect(detail.getByText('Source confidence', { exact: true })).toBeVisible()
+  await detail.getByLabel('Pipeline status').selectOption('Shortlisted')
+  await detail.getByLabel('Follow-up date').fill('2030-01-15')
+  await detail.getByLabel('Notes').fill('E2E follow-up note')
+  await detail.getByRole('button', { name: 'Done' }).click()
+  await expect(page.getByLabel(`Status for ${title}`)).toHaveValue('Shortlisted')
+  await page.reload()
+  await expect(page.getByLabel(`Status for ${title}`)).toHaveValue('Shortlisted')
+
+  await page.getByRole('button', { name: new RegExp(title) }).click()
+  const updatedDetail = page.getByRole('dialog')
+  await expect(updatedDetail.getByLabel('Follow-up date')).toHaveValue('2030-01-15')
+  await expect(updatedDetail.getByLabel('Notes')).toHaveValue('E2E follow-up note')
 
   let cancelMessage = ''
   page.once('dialog', async dialog => {
     cancelMessage = dialog.message()
     await dialog.dismiss()
   })
-  await detail.getByRole('button', { name: 'Delete prospect' }).click()
+  await updatedDetail.getByRole('button', { name: 'Delete prospect' }).click()
   expect(cancelMessage).toContain('cannot be undone')
-  await expect(detail).toBeVisible()
+  await expect(updatedDetail).toBeVisible()
   await expect(page.getByRole('button', { name: new RegExp(title) })).toBeVisible()
 
   let confirmationMessage = ''
@@ -58,8 +70,8 @@ test('creates, retrieves, and safely deletes a manual opportunity', async ({ pag
     confirmationMessage = dialog.message()
     await dialog.accept()
   })
-  await detail.getByRole('button', { name: 'Delete prospect' }).click()
+  await updatedDetail.getByRole('button', { name: 'Delete prospect' }).click()
   expect(confirmationMessage).toContain('cannot be undone')
-  await expect(detail).toBeHidden()
+  await expect(updatedDetail).toBeHidden()
   await expect(page.getByRole('button', { name: new RegExp(title) })).toHaveCount(0)
 })

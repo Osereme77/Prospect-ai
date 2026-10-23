@@ -240,7 +240,7 @@ No live Supabase, Brave, Resend, or hosting secret values are stored in the repo
 
 - Current branch is `ui-test`; `main` remains unchanged.
 - `npm run build`: passed. `npm test`: 51/51 passed. `npm run test:e2e`: 6/6 passed locally on Windows against a production preview.
-- Browser coverage includes local prospect create/reload/delete, CSV export contents, displayed score components, auth and password-recovery protections, and mobile navigation/overflow. GitHub Actions for the current changes are not verified.
+- Browser coverage includes local prospect create/reload/delete, CSV export contents, displayed score components, status/follow-up/notes persistence after refresh, auth and password-recovery protections, and mobile navigation/overflow. GitHub Actions run [40000980282](https://github.com/Osereme77/Prospect-ai/actions/runs/40000980282) passed for commit `c7e4174`; CI for the latest timeout and status-persistence test updates will run after they are pushed.
 - Remaining external gates: two-user deployed isolation, approved-source live discovery and quality review, verified email sender and live delivery/retries, scheduler plan/secrets/opt-in plus a browser-closed run, human accessibility/usability review, and production backup/rollback/release setup.
 
 ## Hosted password recovery owner verification — 2026-10-23
@@ -270,7 +270,7 @@ No live Supabase, Brave, Resend, or hosting secret values are stored in the repo
 
 ## 2026-10-23 Local desktop and mobile browser check
 
-- Fixed the local Playwright setup to build a production preview for local-storage/mobile tests with Supabase configuration explicitly blank, run Vite directly for both server targets, and allow reuse of existing test servers. Fixed the manual lead test to locate its detail dialog by role and verify its heading, and waited for the auth page to render before checking its sign-in screen.
-- `npm run test:e2e` passed all 6 tests on Windows: manual prospect create/reload/delete, four auth and recovery cases, and mobile navigation/overflow. `npm test` passed 51/51 and `npm run build` passed.
+- Fixed the local Playwright setup to build a production preview for local-storage/mobile tests with Supabase configuration explicitly blank, run Vite directly for both server targets, and allow reuse of existing test servers. The local test timeout is 60 seconds on Windows to tolerate slow browser startup; CI retains the 30-second default. Fixed the manual lead test to locate its detail dialog by role, verify its heading and score components, check CSV export contents, and verify status/follow-up/notes persistence across refresh. Auth tests wait for the sign-in page to render before asserting it.
+- `npm run test:e2e` passed all 6 tests on Windows: manual prospect create/reload/export/score/update/follow-up/delete, four auth and recovery cases, and mobile navigation/overflow. `npm test` passed 51/51 and `npm run build` passed.
 - After the approved Remote OK source row was restored, the owner retried hosted discovery; the UI still reported “Discovery failed. Check provider setup, quota, and your connection.” The Supabase CLI access token and authenticated dashboard connection needed to inspect function settings and the invocation are unavailable. No secret values were accessed, and no live discovery success is claimed.
-- GitHub Actions status for the current local changes is unverified because GitHub CLI and connected browser access are unavailable. Previous CI evidence remains the successful run recorded above; it does not validate these new test-harness changes.
+- GitHub Actions run [40000980282](https://github.com/Osereme77/Prospect-ai/actions/runs/40000980282) passed for commit `c7e4174`. The newer local timeout and status/follow-up assertions are not yet on GitHub; record their CI result after push.
