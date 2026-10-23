@@ -32,7 +32,7 @@ flowchart TD
 1. Enter an email and password, or create an account.
 2. New accounts receive a verification link; callback URLs must be allowed in Supabase Auth settings.
 3. Sign-in loads the private cloud workspace only after its owner-scoped queries succeed.
-4. A forgotten password sends a generic recovery response; the callback opens the password-update screen.
+4. A forgotten password sends an account-agnostic response and requests a callback to `/?auth=recovery`. Show the password-update form only after Supabase emits `PASSWORD_RECOVERY` with a valid session; an expired, reused, or unverified callback offers a fresh recovery request and cannot change a password.
 5. Sign-out clears the session and returns to the account screen.
 
 ### First-time workspace setup
