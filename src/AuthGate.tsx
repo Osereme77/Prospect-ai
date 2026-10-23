@@ -8,10 +8,26 @@ import { restoreInitialSession } from './lib/authSession'
 const App = lazy(() => import('./App'))
 
 type Mode = 'sign_in' | 'sign_up' | 'recovery' | 'update_password'
+
+function isPasswordRecoveryReturn() {
+  const query = new URLSearchParams(window.location.search)
+  const hash = new URLSearchParams(window.location.hash.replace(/^#/, ''))
+  return query.get('auth') === 'recovery' || query.get('type') === 'recovery' || hash.get('type') === 'recovery'
+}
+
+function clearPasswordRecoveryMarker() {
+  const url = new URL(window.location.href)
+  url.searchParams.delete('auth')
+  if (url.searchParams.get('type') === 'recovery') url.searchParams.delete('type')
+  url.hash = ''
+  window.history.replaceState({}, '', `${url.pathname}${url.search}`)
+}
+
 export default function AuthGate() {
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(!supabaseConfigured)
-  const [mode, setMode] = useState<Mode>('sign_in')
+  const [mode, setMode] = useState<Mode>(() => isPasswordRecoveryReturn() ? 'update_password' : 'sign_in')
+  const [recoveryVerified, setRecoveryVerified] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
@@ -36,7 +52,7 @@ export default function AuthGate() {
       if (!alive) return
       authEventReceived = true
       setSession(next); setReady(true)
-      if (event === 'PASSWORD_RECOVERY') setMode('update_password')
+      if (event === 'PASSWORD_RECOVERY') { setRecoveryVerified(true); setMode('update_password') }
     })
     return () => { alive = false; listener.subscription.unsubscribe() }
   }, [])
@@ -53,13 +69,17 @@ export default function AuthGate() {
         if (error) throw error
         setMessage('Check your email to verify the account before signing in.')
       } else if (mode === 'recovery') {
-        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: window.location.origin })
+        const recoveryUrl = new URL('/', window.location.origin)
+        recoveryUrl.searchParams.set('auth', 'recovery')
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo: recoveryUrl.toString() })
         if (error) throw error
         setMessage('If the address belongs to an account, a password reset link is on its way.')
       } else {
+        if (!session?.user || !recoveryVerified) throw new Error('This password reset link is invalid or has expired. Request a new link to continue.')
         const { error } = await supabase.auth.updateUser({ password })
         if (error) throw error
-        await supabase.auth.signOut(); setSession(null); setMode('sign_in'); setMessage('Password updated. Sign in with your new password.')
+        clearPasswordRecoveryMarker()
+        await supabase.auth.signOut(); setSession(null); setRecoveryVerified(false); setMode('sign_in'); setMessage('Password updated. Sign in with your new password.')
       }
     } catch (cause) { setError(cause instanceof Error ? cause.message : 'The request could not be completed.') }
     finally { setBusy(false) }
@@ -90,6 +110,7 @@ export default function AuthGate() {
   if (session?.user && mode !== 'update_password') return <Suspense fallback={<div className="auth-loading" role="status">Loading workspace…</div>}><App user={session.user} onSignOut={async () => { await supabase?.auth.signOut() }} /></Suspense>
 
   const titles: Record<Mode, string> = { sign_in: 'Welcome back', sign_up: 'Create your account', recovery: 'Reset your password', update_password: 'Choose a new password' }
+  if (mode === 'update_password' && (!session?.user || !recoveryVerified)) return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><span className="brand-mark">✦</span> prospect<span>.ai</span></div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>Password reset link unavailable</h1><p className="auth-intro">This link may have expired or already been used. Request a new password reset link to continue.</p><button className="primary auth-submit" onClick={() => { clearPasswordRecoveryMarker(); setMode('recovery'); setError(''); setMessage('') }}>Request a new link</button><div className="auth-links"><button type="button" onClick={() => { clearPasswordRecoveryMarker(); setError(''); setMessage(''); setMode('sign_in') }}><ArrowLeft size={14}/> Back to sign in</button></div></section></main>
   return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><span className="brand-mark">✦</span> prospect<span>.ai</span></div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>{titles[mode]}</h1><p className="auth-intro">{mode === 'sign_up' ? 'Set up your private prospecting workspace.' : mode === 'recovery' ? 'We’ll send a secure reset link if the account exists.' : mode === 'update_password' ? 'Use a new password for your account.' : 'Sign in to your private prospecting workspace.'}</p>
     <form onSubmit={submit}>
       {mode !== 'update_password' && <label>Email address<div className="auth-input"><Mail size={16}/><input type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"/></div></label>}

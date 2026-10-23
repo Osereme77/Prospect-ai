@@ -24,3 +24,45 @@ test('resends email confirmation without revealing whether an account exists', a
   expect(requestBody).toMatchObject({ type: 'signup', email: 'owner@example.test' })
   expect(new URL(requestUrl).searchParams.get('redirect_to')).toBe('http://127.0.0.1:4174')
 })
+
+test('handles confirmation email rate limits without echoing the email address', async ({ page }) => {
+  await page.route('https://auth-gate-test.supabase.co/auth/v1/resend**', async route => {
+    await route.fulfill({
+      status: 429,
+      contentType: 'application/json',
+      body: JSON.stringify({ code: 'over_email_send_rate_limit', message: 'Email rate limit exceeded' }),
+    })
+  })
+
+  await page.goto('/')
+  await page.getByLabel('Email address').fill('private-address@example.test')
+  await page.getByRole('button', { name: 'Resend confirmation' }).click()
+
+  const error = page.getByRole('alert')
+  await expect(error).toHaveText('Could not send a confirmation email. Check Auth email setup and wait for any sending limit to clear before trying again.')
+  await expect(error).not.toContainText('private-address@example.test')
+})
+
+test('returns password reset emails to a protected password update screen', async ({ page }) => {
+  let redirectTo = ''
+  await page.route('https://auth-gate-test.supabase.co/auth/v1/recover**', async route => {
+    redirectTo = new URL(route.request().url()).searchParams.get('redirect_to') ?? ''
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '{}' })
+  })
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Forgot password?' }).click()
+  await page.getByLabel('Email address').fill('owner@example.test')
+  await page.getByRole('button', { name: 'Send reset link' }).click()
+
+  await expect(page.getByRole('status')).toHaveText('If the address belongs to an account, a password reset link is on its way.')
+  const recoveryUrl = new URL(redirectTo)
+  expect(recoveryUrl.origin).toBe('http://127.0.0.1:4174')
+  expect(recoveryUrl.searchParams.get('auth')).toBe('recovery')
+
+  await page.goto('/?auth=recovery')
+  await expect(page.getByRole('heading', { name: 'Password reset link unavailable' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your prospecting command centre' })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Request a new link' }).click()
+  await expect(page.getByRole('heading', { name: 'Reset your password' })).toBeVisible()
+})
