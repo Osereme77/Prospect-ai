@@ -242,3 +242,8 @@ No live Supabase, Brave, Resend, or hosting secret values are stored in the repo
 - `npm run build`: passed. `npm test`: 48/48 passed. GitHub Actions run `39950125309`: verify, E2E, and database all passed.
 - Local Windows Playwright remains unreliable during mocked Supabase session restoration. Use the successful CI E2E job as evidence for its covered cases; do not treat it as proof of a successful hosted password change or cloud lead workflow.
 - Remaining user/external gates include the Supabase redirect/template check and fresh recovery test, confirmed Auth account, deployed cloud lead create/retrieve/deletion and two-user isolation, approved-source live discovery review, verified sender plus live email retries, scheduler plan/secret/opt-in and browser-closed run, human accessibility/usability review, and production backup/rollback/release setup.
+
+## Hosted password recovery owner verification — 2026-10-23
+
+- The owner confirms the password reset flow now works in the hosted `ui-test` preview. This closes the previously open recovery callback/password-change acceptance item; the owner did not report which Supabase dashboard setting changed.
+- Successful sign-in after reset, authenticated cloud lead create/retrieve/delete, and two-account deployed RLS isolation remain unverified. Continue with the hosted core workflow and keep production on `main` unchanged until release gates are met.

@@ -66,7 +66,7 @@ test('returns password reset emails to a protected password update screen', asyn
   await page.getByRole('button', { name: 'Request a new link' }).click()
   await expect(page.getByRole('heading', { name: 'Reset your password' })).toBeVisible()
 
-  await page.goto('/?error_code=otp_expired', { waitUntil: 'commit' })
+  await page.goto('/#error_code=otp_expired', { waitUntil: 'commit' })
   await expect(page.getByRole('heading', { name: 'Password reset link unavailable' })).toBeVisible({ timeout: 15_000 })
   await expect(page.getByRole('heading', { name: 'Your prospecting command centre' })).toHaveCount(0)
 })
