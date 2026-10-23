@@ -2,7 +2,7 @@
 // in and whose Supabase Auth email is confirmed. Configure Resend secrets only
 // after verifying a sender domain; the function does not send when unconfigured.
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import { notificationEmail, retryAt } from '../_shared/emailOutbox.ts'
+import { notificationEmail, resendApiKey, retryAt } from '../_shared/emailOutbox.ts'
 
 const json = (body: unknown, status = 200) => new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
@@ -13,7 +13,7 @@ Deno.serve(async request => {
 
   const projectUrl = Deno.env.get('SUPABASE_URL')
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  const resendKey = Deno.env.get('RESEND_API_KEY')
+  const resendKey = resendApiKey(name => Deno.env.get(name))
   const emailFrom = Deno.env.get('EMAIL_FROM')
   if (!projectUrl || !serviceRoleKey || !resendKey || !emailFrom) return json({ error: 'email_provider_not_configured' }, 503)
 

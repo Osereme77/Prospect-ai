@@ -11,7 +11,7 @@ import { countFollowUpsDue, isFollowUpDue } from '../src/lib/followups.ts'
 import { effectiveSourceRequestLimits } from '../supabase/functions/_shared/sourcePolicy.ts'
 import { scheduledRemoteOkPayload } from '../supabase/functions/_shared/scheduledDiscovery.ts'
 import { reviewPublicPage } from '../src/lib/research.ts'
-import { notificationEmail, retryAt } from '../supabase/functions/_shared/emailOutbox.ts'
+import { notificationEmail, resendApiKey, retryAt } from '../supabase/functions/_shared/emailOutbox.ts'
 
 test('notification email escapes untrusted lead content in HTML', () => {
   const message = notificationEmail({ title: 'Strong fit', body: 'Read <this>' }, {
@@ -31,6 +31,14 @@ test('email retry delays are bounded and increase for successive attempts', () =
   assert.equal(Date.parse(retryAt(1, now)) - now, 60_000)
   assert.equal(Date.parse(retryAt(2, now)) - now, 5 * 60_000)
   assert.equal(Date.parse(retryAt(99, now)) - now, 60 * 60_000)
+})
+
+test('email worker accepts the saved Resend_Api secret alias without exposing its value', () => {
+  const values = new Map([['Resend_Api', 'server-only-test-secret']])
+  assert.equal(resendApiKey(name => values.get(name)), 'server-only-test-secret')
+  values.set('RESEND_API_KEY', 'canonical-secret')
+  assert.equal(resendApiKey(name => values.get(name)), 'canonical-secret')
+  assert.equal(resendApiKey(() => undefined), undefined)
 })
 
 test('score uses the documented weights and rounds to an integer', () => {

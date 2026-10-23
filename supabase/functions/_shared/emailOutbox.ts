@@ -11,6 +11,10 @@ export interface EmailNotification {
   body: string
 }
 
+export function resendApiKey(getEnv: (name: string) => string | undefined): string | undefined {
+  return getEnv('RESEND_API_KEY') || getEnv('Resend_Api')
+}
+
 export function notificationEmail(notification: EmailNotification, lead?: EmailLead | null) {
   const safe = (value: string) => value.replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character]!)
   const title = lead?.title ?? notification.title
