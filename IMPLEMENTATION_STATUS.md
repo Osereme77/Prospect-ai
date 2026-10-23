@@ -245,5 +245,11 @@ No live Supabase, Brave, Resend, or hosting secret values are stored in the repo
 
 ## Hosted password recovery owner verification — 2026-10-23
 
-- The owner confirms the password reset flow now works in the hosted `ui-test` preview. This closes the previously open recovery callback/password-change acceptance item; the owner did not report which Supabase dashboard setting changed.
-- Successful sign-in after reset, authenticated cloud lead create/retrieve/delete, and two-account deployed RLS isolation remain unverified. Continue with the hosted core workflow and keep production on `main` unchanged until release gates are met.
+- The owner confirms the password reset flow now works in the hosted `ui-test` preview. This closes the previously open reset-flow acceptance item; the owner did not report which Supabase dashboard setting changed.
+
+## Hosted core workflow owner verification — 2026-10-23
+
+- The owner confirms successful sign-in to the `ui-test` preview after resetting the password.
+- The owner created a disposable test lead, refreshed the page and confirmed it remained, then deleted it and refreshed again to confirm it remained deleted. This verifies the hosted single-account cloud create/retrieve/delete workflow by owner report.
+- Two-account deployed RLS isolation, admin audit-event review, live discovery quality, email delivery, scheduled execution, human accessibility review, and production backup/rollback/release checks remain open.
+- Commit `1e3fd50` passed the GitHub `verify` and `database` jobs, including the pgTAP suite, but its browser E2E job exposed a test navigation issue: changing only the fragment did not remount the SPA. The regression test now changes the query and fragment while retaining Supabase's real fragment error shape; the correction awaits CI verification.
