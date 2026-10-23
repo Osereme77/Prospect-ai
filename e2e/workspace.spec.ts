@@ -23,8 +23,10 @@ test('creates, retrieves, and safely deletes a manual opportunity', async ({ pag
 
   await page.getByRole('button', { name: /Opportunities/ }).click()
   await page.getByRole('button', { name: new RegExp(title) }).click()
-  const detail = page.getByRole('dialog', { name: title })
+  const detail = page.getByRole('dialog')
   await expect(detail).toBeVisible()
+  await expect(detail.getByRole('heading', { name: title })).toBeVisible()
+  await expect(detail).toHaveAccessibleName(title)
   let cancelMessage = ''
   page.once('dialog', async dialog => {
     cancelMessage = dialog.message()

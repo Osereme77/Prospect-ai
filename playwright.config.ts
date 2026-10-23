@@ -33,7 +33,7 @@ export default defineConfig({
   ],
   webServer: [
     {
-      command: 'npm run dev -- --host 127.0.0.1 --port 4173 --strictPort',
+      command: 'node ./node_modules/vite/bin/vite.js preview --host 127.0.0.1 --port 4173 --strictPort',
       url: 'http://127.0.0.1:4173',
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,
@@ -44,9 +44,9 @@ export default defineConfig({
       },
     },
     {
-      command: 'npm run dev -- --host 127.0.0.1 --port 4175 --strictPort',
+      command: 'node ./node_modules/vite/bin/vite.js --host 127.0.0.1 --port 4175 --strictPort',
       url: 'http://127.0.0.1:4175',
-      reuseExistingServer: false,
+      reuseExistingServer: !process.env.CI,
       timeout: 60_000,
       env: {
         VITE_SUPABASE_URL: 'https://auth-gate-test.supabase.co',
