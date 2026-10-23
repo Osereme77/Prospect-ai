@@ -2,6 +2,13 @@
 
 This runbook describes the current development implementation. It is not evidence that a production scheduler, email sender, or alerting service has been configured. Keep recurring discovery and email disabled until the hosting plan, provider terms, credentials, and recovery path have been reviewed.
 
+## Development discovery state (2026-10-23)
+
+- The owner's written approval for Remote OK was recorded. The development project's `discover` function is enabled for this free public feed with a 100-request monthly provider cap; the account source is enabled with a matching cap and an audited maintenance record. The function CORS allowlist contains only localhost and `https://ui-test--jobsremyai.netlify.app`; its preview-origin preflight returned HTTP 200. The account-level audit trigger cannot attribute this setup to an authenticated session, so the maintenance audit entry has a null actor.
+- Remote OK's [feed FAQ](https://remoteok.com/faq) says its feeds are free and asks aggregators to credit Remote OK and link each original post. The app displays the attribution and preserves the original post URL.
+- This configuration does not prove discovery works end to end. Hosted sign-in has failed, so an authenticated on-demand run has not been verified. Do not claim results until a real run appears in **Recent search runs**.
+- Scheduled discovery remains off. There is no scheduler secret or private scheduler, and the account-level scheduled opt-in is false. Do not enable cron as part of this provider approval.
+
 ## Stop provider activity
 
 1. To stop future discovery globally, set the relevant Edge Function secret to `REMOTE_OK_ENABLED=false` and/or `BRAVE_SEARCH_ENABLED=false`. The server rejects disabled providers before making a request.
