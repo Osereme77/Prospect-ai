@@ -51,4 +51,4 @@ If the transaction fails, correct the UUID and rerun it. Do not insert a `user_r
 - Rotate any compromised dashboard credentials and Edge Function secrets through the provider's secret manager. Never paste service-role or provider keys into the frontend environment.
 - Record recovery date, operator, and outcome without recording passwords, tokens, or recovery codes.
 
-This process has not been run against a live project; project ownership, two-person verification, and deployed RLS behavior remain acceptance checks.
+The trusted bootstrap was run and audited for the linked development project. Its only Auth account currently has a password credential but no confirmed email and no successful sign-in. Supabase Auth will not admit an unverified email account. Complete the normal email confirmation flow before testing hosted access; do not disable email confirmation or write directly to `auth.users` as a shortcut. Production account provisioning and deployed two-user RLS behavior remain unverified.
