@@ -180,3 +180,9 @@ No live Supabase, Brave, Resend, or hosting secret values are stored in the repo
 - Added a unit check for legacy alias resolution, canonical-name precedence, and missing-key behavior. Email remains inactive until a verified sender, `OUTBOX_WORKER_SECRET`, and scheduler are configured.
 - Verification: `npm test` passed 48/48; `npm run build` passed with a 443.83 KB entry bundle and no chunk-size warning.
 - Deployed `dispatch-notification-email` version 1 to development project `pugvqkytxutnfucisurl`; a subsequent function inventory confirms it is `ACTIVE` with JWT verification enabled. It fails closed while `OUTBOX_WORKER_SECRET` is unset; live sending and retry behavior are not yet verified.
+
+## 2026-10-23 Netlify browser security headers
+
+- Added a Content Security Policy allowing same-origin application assets and connections to Supabase, while blocking object embedding and framing. Added strict referrer, MIME-sniffing, and permissions headers.
+- Verification: `netlify.toml` parses as TOML, `git diff --check` passes, `npm test` passes 48/48, and `npm run build` passes with a 443.83 KB entry bundle and no chunk-size warning.
+- These headers are configured for the next Netlify deploy; the signed-in preview still needs owner-side verification.
