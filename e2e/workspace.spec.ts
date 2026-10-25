@@ -23,6 +23,13 @@ test('creates, retrieves, and safely deletes a manual opportunity', async ({ pag
   await expect(page.getByText(title, { exact: true }).first()).toBeVisible()
 
   await page.getByRole('button', { name: /Opportunities/ }).click()
+  const prospectSearch = page.getByPlaceholder('Search prospects…')
+  await prospectSearch.fill(title)
+  await expect(page.getByRole('button', { name: new RegExp(title) })).toBeVisible()
+  await prospectSearch.fill('no matching prospect expected')
+  await expect(page.getByText('No matching prospects. Add a new prospect or change your search.')).toBeVisible()
+  await prospectSearch.clear()
+
   const downloadPromise = page.waitForEvent('download')
   await page.getByRole('button', { name: 'Export CSV' }).click()
   const download = await downloadPromise
@@ -43,7 +50,10 @@ test('creates, retrieves, and safely deletes a manual opportunity', async ({ pag
   await expect(detail.getByText('Evidence of need', { exact: true })).toBeVisible()
   await expect(detail.getByText('Source confidence', { exact: true })).toBeVisible()
   await detail.getByLabel('Pipeline status').selectOption('Shortlisted')
+  await expect(detail.getByLabel('Pipeline status')).toHaveValue('Shortlisted')
+  await expect(detail).toBeVisible()
   await detail.getByLabel('Follow-up date').fill('2030-01-15')
+  await expect(detail).toBeVisible()
   await detail.getByLabel('Notes').fill('E2E follow-up note')
   await detail.getByRole('button', { name: 'Done' }).click()
   await expect(page.getByLabel(`Status for ${title}`)).toHaveValue('Shortlisted')
