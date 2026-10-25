@@ -9,7 +9,7 @@ In Supabase Dashboard → Edge Functions → Secrets for the linked project, set
 | Secret | Value |
 | --- | --- |
 | `RESEND_API_KEY` | Existing Resend key. The worker also accepts the existing `Resend_Api` name. |
-| `EMAIL_FROM` | A sender address on a domain Resend shows as verified, such as `Remy Prospect AI <alerts@your-verified-domain>` |
+| `EMAIL_FROM` | Test only: `onboarding@resend.dev`. Resend permits this sender only to the email address on your Resend account. This app sends to the opted-in, confirmed Supabase Auth user's address, so test delivery works only when those addresses are the same. For general delivery, use a sender address on a domain Resend shows as verified, such as `Remy Prospect AI <alerts@your-verified-domain>`. |
 | `OUTBOX_WORKER_SECRET` | A new high-entropy random value; also saved under the matching Vault name below. |
 | `SCHEDULED_DISCOVERY_SECRET` | A separate high-entropy random value; also saved under the matching Vault name below. |
 | `REMOTE_OK_ENABLED` | `true` only while the approved public feed is intended to be available. |
