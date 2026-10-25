@@ -34,6 +34,7 @@ export default function AuthGate() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
   const [showPassword, setShowPassword] = useState(false)
   const [email, setEmail] = useState('')
 
@@ -68,6 +69,7 @@ export default function AuthGate() {
         const { error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) throw error
       } else if (mode === 'sign_up') {
+        if (password !== confirmPassword) throw new Error('Your passwords do not match. Check both fields and try again.')
         const { error } = await supabase.auth.signUp({ email, password, options: { emailRedirectTo: window.location.origin } })
         if (error) throw error
         setMessage('Check your email to verify the account before signing in.')
@@ -114,14 +116,45 @@ export default function AuthGate() {
 
   const titles: Record<Mode, string> = { sign_in: 'Welcome back', sign_up: 'Create your account', recovery: 'Reset your password', update_password: 'Choose a new password' }
   if (mode === 'update_password' && (!session?.user || !recoveryVerified)) return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><span className="brand-mark">✦</span> prospect<span>.ai</span></div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>Password reset link unavailable</h1><p className="auth-intro">This link may have expired or already been used. Request a new password reset link to continue.</p><button className="primary auth-submit" onClick={() => { clearPasswordRecoveryMarker(); setMode('recovery'); setError(''); setMessage('') }}>Request a new link</button><div className="auth-links"><button type="button" onClick={() => { clearPasswordRecoveryMarker(); setError(''); setMessage(''); setMode('sign_in') }}><ArrowLeft size={14}/> Back to sign in</button></div></section></main>
-  return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><span className="brand-mark">✦</span> prospect<span>.ai</span></div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>{titles[mode]}</h1><p className="auth-intro">{mode === 'sign_up' ? 'Set up your private prospecting workspace.' : mode === 'recovery' ? 'We’ll send a secure reset link if the account exists.' : mode === 'update_password' ? 'Use a new password for your account.' : 'Sign in to your private prospecting workspace.'}</p>
+  const isSignUp = mode === 'sign_up'
+  return <main className={`auth-screen${isSignUp ? ' auth-screen-signup' : ''}`}>
+    {isSignUp && <div className="auth-signup-layout">
+      <aside className="auth-signup-promo">
+        <div className="auth-promo-brand"><span className="brand-mark">✦</span> prospect<span>.ai</span></div>
+        <div className="auth-promo-copy">
+          <span className="auth-promo-kicker">A more focused job search</span>
+          <h2>Make your next opportunity easier to find.</h2>
+          <p>Bring discovery, prospect details, and follow-ups into one organized workspace.</p>
+          <ul>
+            <li><span>01</span><div><b>Discover opportunities</b><small>Search for roles that fit your goals.</small></div></li>
+            <li><span>02</span><div><b>Keep prospects organized</b><small>Save useful details in one place.</small></div></li>
+            <li><span>03</span><div><b>Follow up with purpose</b><small>Track the next step for each lead.</small></div></li>
+          </ul>
+        </div>
+        <div className="auth-promo-foot"><ShieldCheck size={15}/> Your workspace is protected by account sign-in.</div>
+      </aside>
+      <section className="auth-card auth-signup-card">
+        <div className="auth-signup-heading"><span className="auth-step-label">GET STARTED</span><h1>{titles[mode]}</h1><p className="auth-intro">Create an account to set up your prospecting workspace.</p></div>
+        <form onSubmit={submit}>
+          <label>Email address<div className="auth-input"><Mail size={16}/><input type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"/></div></label>
+          <label>Password<div className="auth-input"><LockKeyhole size={16}/><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters"/><button className="password-visibility" type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div><small className="auth-field-hint">Use at least 8 characters.</small></label>
+          <label>Confirm password<div className="auth-input"><LockKeyhole size={16}/><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Enter your password again"/></div></label>
+          {error && <div className="auth-error" role="alert">{error}</div>}{message && <div className="auth-message" role="status">{message}</div>}
+          <button className="primary auth-submit" disabled={busy}>{busy ? <LoaderCircle className="spin" size={16}/> : null}Create account</button>
+        </form>
+        <div className="auth-links auth-signup-links"><span>Already have an account? <button type="button" onClick={() => { setError(''); setMessage(''); setMode('sign_in') }}>Sign in</button></span></div>
+        <div className="auth-security"><ShieldCheck size={15}/> Your account is protected by Supabase Auth and database row-level security.</div>
+      </section>
+    </div>}
+    {!isSignUp && <section className="auth-card"><div className="auth-brand"><span className="brand-mark">✦</span> prospect<span>.ai</span></div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>{titles[mode]}</h1><p className="auth-intro">{mode === 'recovery' ? 'We’ll send a secure reset link if the account exists.' : mode === 'update_password' ? 'Use a new password for your account.' : 'Sign in to your private prospecting workspace.'}</p>
     <form onSubmit={submit}>
       {mode !== 'update_password' && <label>Email address<div className="auth-input"><Mail size={16}/><input type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"/></div></label>}
       {mode !== 'recovery' && <label>Password<div className="auth-input"><LockKeyhole size={16}/><input type={showPassword ? 'text' : 'password'} required minLength={8} autoComplete={mode === 'sign_in' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters"/><button className="password-visibility" type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>}
       {error && <div className="auth-error" role="alert">{error}</div>}{message && <div className="auth-message" role="status">{message}</div>}
-      <button className="primary auth-submit" disabled={busy}>{busy ? <LoaderCircle className="spin" size={16}/> : null}{mode === 'sign_in' ? 'Sign in' : mode === 'sign_up' ? 'Create account' : mode === 'recovery' ? 'Send reset link' : 'Update password'}</button>
+      <button className="primary auth-submit" disabled={busy}>{busy ? <LoaderCircle className="spin" size={16}/> : null}{mode === 'sign_in' ? 'Sign in' : mode === 'recovery' ? 'Send reset link' : 'Update password'}</button>
     </form>
     <div className="auth-links">{mode === 'sign_in' ? <><span className="auth-link-group"><button type="button" onClick={() => { setError(''); setMessage(''); setMode('recovery') }}>Forgot password?</button><button type="button" disabled={busy} onClick={resendConfirmation}>Resend confirmation</button></span><span>New here? <button type="button" onClick={() => { setError(''); setMessage(''); setMode('sign_up') }}>Create account</button></span></> : <button type="button" onClick={() => { setError(''); setMessage(''); setMode('sign_in') }}><ArrowLeft size={14}/> Back to sign in</button>}</div>
     <div className="auth-security"><ShieldCheck size={15}/> Your account is protected by Supabase Auth and database row-level security.</div>
-  </section></main>
+    </section>}
+  </main>
 }
