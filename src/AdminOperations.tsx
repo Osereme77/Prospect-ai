@@ -119,8 +119,8 @@ export default function AdminOperations({ user, notify }: { user: User; notify: 
     </section>
 
     <div className="admin-grid">
-      <section className="panel admin-panel"><h2>Recent search runs</h2><div className="table-wrap"><table><thead><tr><th>STATUS</th><th>QUERY</th><th>RESULTS</th><th>CREATED</th></tr></thead><tbody>
-        {data.runs.length ? data.runs.map(run => <tr key={run.id}><td>{run.status}</td><td>{run.query.slice(0, 100)}</td><td>{run.result_count}</td><td>{new Date(run.created_at).toLocaleString()}</td></tr>) : <tr><td colSpan={4} className="empty">No search runs.</td></tr>}
+      <section className="panel admin-panel"><h2>Recent search runs</h2><div className="table-wrap"><table><thead><tr><th>STATUS</th><th>QUERY</th><th>RESULTS</th><th>ERROR</th><th>CREATED</th></tr></thead><tbody>
+        {data.runs.length ? data.runs.map(run => <tr key={run.id}><td>{run.status}</td><td>{run.query.slice(0, 100)}</td><td>{run.result_count}</td><td>{run.error_code ?? run.error_summary ?? '—'}</td><td>{new Date(run.created_at).toLocaleString()}</td></tr>) : <tr><td colSpan={5} className="empty">No search runs.</td></tr>}
       </tbody></table></div></section>
       <section className="panel admin-panel"><h2>Audit events</h2><p>Recent administrative actions. Credentials and token values are excluded.</p><div className="table-wrap"><table><thead><tr><th>ACTION</th><th>ENTITY</th><th>ID</th><th>ACTOR</th><th>TIME</th></tr></thead><tbody>
         {data.audit.length ? data.audit.map(item => <tr key={item.id}><td>{item.action}</td><td>{item.entity_type}</td><td className="admin-id">{item.entity_id ?? '—'}</td><td className="admin-id">{item.actor_id ?? 'System'}</td><td>{new Date(item.created_at).toLocaleString()}</td></tr>) : <tr><td colSpan={5} className="empty">No audit events recorded.</td></tr>}

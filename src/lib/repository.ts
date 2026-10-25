@@ -129,7 +129,7 @@ export async function dismissCloudNotification(user:User,id:string) {
 
 export interface AdminOperationsData {
   sources: { id:string; name:string; enabled:boolean; owner_id:string|null; kind:string; created_at:string }[]
-  runs: { id:string; owner_id:string; query:string; status:string; result_count:number; created_at:string; error_summary:string|null }[]
+  runs: { id:string; owner_id:string; query:string; status:string; result_count:number; created_at:string; error_code:string|null; error_summary:string|null }[]
   outbox: { id:string; owner_id:string; status:string; attempts:number; last_error_code:string|null; created_at:string; next_attempt_at:string; sent_at:string|null }[]
   audit: { id:string; actor_id:string|null; action:string; entity_type:string; entity_id:string|null; created_at:string }[]
   usage: { month_start:string; total_requests:number; active_accounts:number }[]
@@ -144,7 +144,7 @@ export async function loadAdminOperations(_user:User):Promise<AdminOperationsDat
   if(!allowed)return null
   const [sources,runs,outbox,audit,usage,queueHealth,workerHealth]=await Promise.all([
     supabase.from('discovery_sources').select('id,name,enabled,owner_id,kind,created_at').order('created_at',{ascending:false}).limit(50),
-    supabase.from('search_runs').select('id,owner_id,query,status,result_count,created_at,error_summary').order('created_at',{ascending:false}).limit(50),
+    supabase.from('search_runs').select('id,owner_id,query,status,result_count,created_at,error_code,error_summary').order('created_at',{ascending:false}).limit(50),
     supabase.from('outbox').select('id,owner_id,status,attempts,last_error_code,created_at,next_attempt_at,sent_at').order('created_at',{ascending:false}).limit(50),
     supabase.from('audit_logs').select('id,actor_id,action,entity_type,entity_id,created_at').order('created_at',{ascending:false}).limit(50),
     supabase.rpc('admin_discovery_usage'),
