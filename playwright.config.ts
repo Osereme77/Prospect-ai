@@ -14,9 +14,9 @@ export default defineConfig({
   },
   projects: [
     {
-      name: 'local-storage',
+      name: 'authenticated-workspace',
       testMatch: 'workspace.spec.ts',
-      use: { baseURL: 'http://127.0.0.1:4173' },
+      use: { baseURL: 'http://127.0.0.1:4175' },
     },
     {
       name: 'auth-gate',

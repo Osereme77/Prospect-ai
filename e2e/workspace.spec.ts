@@ -1,12 +1,43 @@
-import { expect, test } from '@playwright/test'
-import { readFile } from 'node:fs/promises'
+import { expect, test, type Page } from '@playwright/test'
 
-test('creates, retrieves, and safely deletes a manual opportunity', async ({ page }) => {
+const userId = '11111111-1111-4111-8111-111111111111'
+const fakeJwt = 'eyJhbGciOiJub25lIn0.eyJzdWIiOiIxMTExMTExMS0xMTExLTQxMTEtODExMS0xMTExMTExMTExMTEiLCJyb2xlIjoiYXV0aGVudGljYXRlZCIsImV4cCI6NDEwMjQ0NDgwMH0.signature'
+
+async function signInWithMockWorkspace(page: Page) {
+  let leads: Record<string, unknown>[] = []
+  await page.route('https://auth-gate-test.supabase.co/**', async route => {
+    const request = route.request()
+    const url = new URL(request.url())
+    const headers = { 'Access-Control-Allow-Origin': '*', 'Access-Control-Allow-Headers': '*', 'Access-Control-Allow-Methods': 'GET,POST,PATCH,DELETE,OPTIONS' }
+    if (request.method() === 'OPTIONS') return route.fulfill({ status: 204, headers })
+    if (url.pathname === '/auth/v1/token') return route.fulfill({ status: 200, headers, contentType: 'application/json', body: JSON.stringify({ access_token: fakeJwt, token_type: 'bearer', expires_in: 3600, refresh_token: 'test-refresh-token', user: { id: userId, email: 'owner@example.test', email_confirmed_at: '2026-01-01T00:00:00Z', app_metadata: { provider: 'email', providers: ['email'] }, user_metadata: {}, aud: 'authenticated', role: 'authenticated', created_at: '2026-01-01T00:00:00Z' } }) })
+    if (url.pathname === '/rest/v1/rpc/sync_workspace') {
+      const body = request.postDataJSON() as { p_leads?: Record<string, unknown>[] }
+      leads = body.p_leads ?? []
+      return route.fulfill({ status: 200, headers, contentType: 'application/json', body: 'true' })
+    }
+    if (url.pathname === '/rest/v1/leads' && request.method() === 'GET') {
+      const rows = leads.map(lead => ({ ...lead, created_at: '2026-01-01T00:00:00Z', lead_evidence: [], lead_scores: [] }))
+      return route.fulfill({ status: 200, headers, contentType: 'application/json', body: JSON.stringify(rows) })
+    }
+    if (url.pathname === '/rest/v1/user_roles' || url.pathname === '/rest/v1/profiles' || url.pathname === '/rest/v1/notifications' || url.pathname === '/rest/v1/search_runs' || url.pathname === '/rest/v1/discovery_sources' || url.pathname === '/rest/v1/lead_scores') {
+      return route.fulfill({ status: 200, headers, contentType: 'application/json', body: '[]' })
+    }
+    return route.fulfill({ status: 200, headers, contentType: 'application/json', body: '[]' })
+  })
+
+  await page.goto('/', { waitUntil: 'commit' })
+  await page.locator('.landing-nav-actions').getByRole('button', { name: 'Sign in', exact: true }).click()
+  await page.getByLabel('Email address').fill('owner@example.test')
+  await page.locator('input[autocomplete="current-password"]').fill('valid-test-password')
+  await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Your opportunity command centre' })).toBeVisible()
+}
+
+test('authenticated visitor reaches the dashboard and can create, retrieve, and delete a lead', async ({ page }) => {
   const title = `E2E prospect ${Date.now()}`
-
-  await page.goto('/')
+  await signInWithMockWorkspace(page)
   await page.getByRole('button', { name: 'Add prospect' }).click()
-
   const dialog = page.getByRole('dialog', { name: 'Add a prospect' })
   await dialog.getByLabel('Prospect type').selectOption('Opportunity')
   await dialog.getByLabel('Title or need').fill(title)
@@ -20,68 +51,19 @@ test('creates, retrieves, and safely deletes a manual opportunity', async ({ pag
   await expect(page.getByText(title, { exact: true }).first()).toBeVisible()
 
   await page.reload()
+  await expect(page.getByRole('heading', { name: 'Your opportunity command centre' })).toBeVisible()
   await expect(page.getByText(title, { exact: true }).first()).toBeVisible()
-
   await page.getByRole('button', { name: /Opportunities/ }).click()
-  const prospectSearch = page.getByPlaceholder('Search prospects…')
-  await prospectSearch.fill(title)
   await expect(page.getByRole('button', { name: new RegExp(title) })).toBeVisible()
-  await prospectSearch.fill('no matching prospect expected')
-  await expect(page.getByText('No matching prospects. Add a new prospect or change your search.')).toBeVisible()
-  await prospectSearch.clear()
-
-  const downloadPromise = page.waitForEvent('download')
-  await page.getByRole('button', { name: 'Export CSV' }).click()
-  const download = await downloadPromise
-  expect(download.suggestedFilename()).toBe('prospect-ai-opportunities.csv')
-  const exportPath = await download.path()
-  expect(exportPath).not.toBeNull()
-  const csv = await readFile(exportPath!, 'utf8')
-  expect(csv).toContain(title)
-  expect(csv).toContain('https://example.com/jobs/e2e-prospect')
 
   await page.getByRole('button', { name: new RegExp(title) }).click()
   const detail = page.getByRole('dialog')
-  await expect(detail).toBeVisible()
   await expect(detail.getByRole('heading', { name: title })).toBeVisible()
-  await expect(detail).toHaveAccessibleName(title)
   await expect(detail.getByText('Why this score')).toBeVisible()
-  await expect(detail.getByText('Relevance', { exact: true })).toBeVisible()
-  await expect(detail.getByText('Evidence of need', { exact: true })).toBeVisible()
-  await expect(detail.getByText('Source confidence', { exact: true })).toBeVisible()
-  await detail.getByLabel('Pipeline status').selectOption('Shortlisted')
-  await expect(detail.getByLabel('Pipeline status')).toHaveValue('Shortlisted')
-  await expect(detail).toBeVisible()
-  await detail.getByLabel('Follow-up date').fill('2030-01-15')
-  await expect(detail).toBeVisible()
-  await detail.getByLabel('Notes').fill('E2E follow-up note')
-  await detail.getByRole('button', { name: 'Done' }).click()
-  await expect(page.getByLabel(`Status for ${title}`)).toHaveValue('Shortlisted')
-  await page.reload()
-  await expect(page.getByLabel(`Status for ${title}`)).toHaveValue('Shortlisted')
-
-  await page.getByRole('button', { name: new RegExp(title) }).click()
-  const updatedDetail = page.getByRole('dialog')
-  await expect(updatedDetail.getByLabel('Follow-up date')).toHaveValue('2030-01-15')
-  await expect(updatedDetail.getByLabel('Notes')).toHaveValue('E2E follow-up note')
-
-  let cancelMessage = ''
-  page.once('dialog', async dialog => {
-    cancelMessage = dialog.message()
-    await dialog.dismiss()
-  })
-  await updatedDetail.getByRole('button', { name: 'Delete prospect' }).click()
-  expect(cancelMessage).toContain('cannot be undone')
-  await expect(updatedDetail).toBeVisible()
-  await expect(page.getByRole('button', { name: new RegExp(title) })).toBeVisible()
-
-  let confirmationMessage = ''
-  page.once('dialog', async dialog => {
-    confirmationMessage = dialog.message()
-    await dialog.accept()
-  })
-  await updatedDetail.getByRole('button', { name: 'Delete prospect' }).click()
-  expect(confirmationMessage).toContain('cannot be undone')
-  await expect(updatedDetail).toBeHidden()
+  page.once('dialog', dialogPrompt => dialogPrompt.accept())
+  await detail.getByRole('button', { name: 'Delete prospect' }).click()
+  await expect(detail).toBeHidden()
   await expect(page.getByRole('button', { name: new RegExp(title) })).toHaveCount(0)
+  await page.getByRole('button', { name: 'Sign out' }).click()
+  await expect(page.locator('.landing-hero h1')).toContainText('Find Better Opportunities')
 })

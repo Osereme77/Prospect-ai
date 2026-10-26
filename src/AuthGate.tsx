@@ -1,13 +1,15 @@
 import { lazy, Suspense, useEffect, useState } from 'react'
 import type { FormEvent } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { ArrowLeft, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, ShieldCheck } from 'lucide-react'
+import { ArrowLeft, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, Moon, ShieldCheck, Sun } from 'lucide-react'
 import { supabase, supabaseConfigured, supabaseConfigError } from './lib/supabase'
 import { restoreInitialSession } from './lib/authSession'
+import LandingPage from './LandingPage'
 
 const App = lazy(() => import('./App'))
 
-type Mode = 'sign_in' | 'sign_up' | 'recovery' | 'update_password'
+type Mode = 'landing' | 'sign_in' | 'sign_up' | 'recovery' | 'update_password'
+type Theme = 'light' | 'dark'
 
 function isPasswordRecoveryReturn() {
   const query = new URLSearchParams(window.location.search)
@@ -28,7 +30,11 @@ function clearPasswordRecoveryMarker() {
 export default function AuthGate() {
   const [session, setSession] = useState<Session | null>(null)
   const [ready, setReady] = useState(!supabaseConfigured)
-  const [mode, setMode] = useState<Mode>(() => isPasswordRecoveryReturn() ? 'update_password' : 'sign_in')
+  const [mode, setMode] = useState<Mode>(() => isPasswordRecoveryReturn() ? 'update_password' : 'landing')
+  const [theme, setTheme] = useState<Theme>(() => {
+    try { const saved = window.localStorage.getItem('remy-scout-theme'); if (saved === 'light' || saved === 'dark') return saved } catch { /* use system preference */ }
+    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
+  })
   const [recoveryVerified, setRecoveryVerified] = useState(false)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState('')
@@ -40,11 +46,19 @@ export default function AuthGate() {
   const [email, setEmail] = useState('')
 
   useEffect(() => {
+    document.documentElement.dataset.theme = theme
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', theme === 'dark' ? '#151522' : '#f6f7f9')
+    try { window.localStorage.setItem('remy-scout-theme', theme) } catch { /* applies for this session */ }
+  }, [theme])
+
+  function toggleTheme() { setTheme(value => value === 'light' ? 'dark' : 'light') }
+
+  useEffect(() => {
     const client = supabase
     if (!client) return
     let alive = true
     let authEventReceived = false
-    restoreInitialSession(() => client.auth.getSession(), () => authEventReceived).then((result) => {
+    restoreInitialSession(() => client.auth.getSession(), () => authEventReceived, 2500).then((result) => {
       if (!alive) return
       if (result.kind === 'restored') setSession(result.session)
       if (result.kind === 'unavailable') {
@@ -58,12 +72,13 @@ export default function AuthGate() {
       authEventReceived = true
       setSession(next); setReady(true)
       if (event === 'PASSWORD_RECOVERY') { setRecoveryVerified(true); setMode('update_password') }
+      if (event === 'SIGNED_OUT') { setRecoveryVerified(false); setMode('landing'); setError(''); setMessage('') }
     })
     return () => { alive = false; listener.subscription.unsubscribe() }
   }, [])
 
   async function submit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault(); setError(''); setMessage(''); setBusy(true)
+    event.preventDefault(); if (mode === 'landing') return; setError(''); setMessage(''); setBusy(true)
     try {
       if (!supabase) throw new Error('Supabase is not configured.')
       if (mode === 'sign_in') {
@@ -110,18 +125,18 @@ export default function AuthGate() {
     } finally { setBusy(false) }
   }
 
-  if (!supabaseConfigured) return <Suspense fallback={<div className="auth-loading" role="status">Loading workspace…</div>}><App /></Suspense>
-  if (!supabase) return <main className="auth-screen"><section className="auth-card"><div className="auth-icon"><LockKeyhole size={20}/></div><h1>Account setup needs attention</h1><p>{supabaseConfigError || 'Check VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.local.'}</p></section></main>
+  if (!supabase && mode !== 'landing') return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><span className="brand-mark">✦</span> Remy Scout</div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>Account setup needs attention</h1><p>{supabaseConfigError || 'Check VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.local.'}</p><button className="auth-back" onClick={() => setMode('landing')}><ArrowLeft size={14}/> Back to Remy Scout</button></section></main>
   if (!ready) return <div className="auth-loading"><LoaderCircle className="spin"/> Checking your secure session…</div>
-  if (session?.user && mode !== 'update_password') return <Suspense fallback={<div className="auth-loading" role="status">Loading workspace…</div>}><App user={session.user} onSignOut={async () => { await supabase?.auth.signOut() }} /></Suspense>
+  if (session?.user && mode !== 'update_password') return <Suspense fallback={<div className="auth-loading" role="status">Loading Remy Scout…</div>}><App user={session.user} onSignOut={async () => { await supabase?.auth.signOut() }} theme={theme} onToggleTheme={toggleTheme}/></Suspense>
 
-  const titles: Record<Mode, string> = { sign_in: 'Welcome back', sign_up: 'Create your account', recovery: 'Reset your password', update_password: 'Choose a new password' }
-  if (mode === 'update_password' && (!session?.user || !recoveryVerified)) return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><span className="brand-mark">✦</span> prospect<span>.ai</span></div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>Password reset link unavailable</h1><p className="auth-intro">This link may have expired or already been used. Request a new password reset link to continue.</p><button className="primary auth-submit" onClick={() => { clearPasswordRecoveryMarker(); setMode('recovery'); setError(''); setMessage('') }}>Request a new link</button><div className="auth-links"><button type="button" onClick={() => { clearPasswordRecoveryMarker(); setError(''); setMessage(''); setMode('sign_in') }}><ArrowLeft size={14}/> Back to sign in</button></div></section></main>
+  const titles: Record<Mode, string> = { landing: 'Welcome to Remy Scout', sign_in: 'Welcome back', sign_up: 'Create your account', recovery: 'Reset your password', update_password: 'Choose a new password' }
+  if (mode === 'update_password' && (!session?.user || !recoveryVerified)) return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><span className="brand-mark">✦</span> Remy Scout</div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>Password reset link unavailable</h1><p className="auth-intro">This link may have expired or already been used. Request a new password reset link to continue.</p><button className="primary auth-submit" onClick={() => { clearPasswordRecoveryMarker(); setMode('recovery'); setError(''); setMessage('') }}>Request a new link</button><div className="auth-links"><button type="button" onClick={() => { clearPasswordRecoveryMarker(); setError(''); setMessage(''); setMode('sign_in') }}><ArrowLeft size={14}/> Back to sign in</button></div></section></main>
+  if (mode === 'landing') return <LandingPage theme={theme} onToggleTheme={toggleTheme} onSignIn={() => { setError(''); setMessage(''); setMode('sign_in') }} onSignUp={() => { setError(''); setMessage(''); setMode('sign_up') }} />
   const isSignUp = mode === 'sign_up'
   return <main className={`auth-screen${isSignUp ? ' auth-screen-signup' : ''}`}>
     {isSignUp && <div className="auth-signup-layout">
       <aside className="auth-signup-promo">
-        <div className="auth-promo-brand"><span className="brand-mark">✦</span> prospect<span>.ai</span></div>
+        <div className="auth-promo-brand"><span className="brand-mark">✦</span> Remy Scout</div>
         <div className="auth-promo-copy">
           <span className="auth-promo-kicker">A more focused job search</span>
           <h2>Make your next opportunity easier to find.</h2>
@@ -135,7 +150,7 @@ export default function AuthGate() {
         <div className="auth-promo-foot"><ShieldCheck size={15}/> Your workspace is protected by account sign-in.</div>
       </aside>
       <section className="auth-card auth-signup-card">
-        <div className="auth-signup-heading"><span className="auth-step-label">GET STARTED</span><h1>{titles[mode]}</h1><p className="auth-intro">Create an account to set up your prospecting workspace.</p></div>
+        <div className="auth-signup-heading"><div className="auth-screen-topline"><span className="auth-step-label">GET STARTED</span><button className="landing-theme-toggle" type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>{theme === 'light' ? <Moon size={16}/> : <Sun size={16}/>}</button></div><h1>{titles[mode]}</h1><p className="auth-intro">Create an account to set up your prospecting workspace.</p></div>
         <form onSubmit={submit}>
           <label>Email address<div className="auth-input"><Mail size={16}/><input type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"/></div></label>
           <label>Password<div className="auth-input"><LockKeyhole size={16}/><input type={showPassword ? 'text' : 'password'} autoComplete="new-password" required minLength={8} value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters"/><button className="password-visibility" type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div><small className="auth-field-hint">Use at least 8 characters.</small></label>
@@ -147,7 +162,7 @@ export default function AuthGate() {
         <div className="auth-security"><ShieldCheck size={15}/> Your account is protected by Supabase Auth and database row-level security.</div>
       </section>
     </div>}
-    {!isSignUp && <section className="auth-card"><div className="auth-brand"><span className="brand-mark">✦</span> prospect<span>.ai</span></div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>{titles[mode]}</h1><p className="auth-intro">{mode === 'recovery' ? 'We’ll send a secure reset link if the account exists.' : mode === 'update_password' ? 'Use a new password for your account.' : 'Sign in to your private prospecting workspace.'}</p>
+    {!isSignUp && <section className="auth-card"><div className="auth-screen-topline"><div className="auth-brand"><span className="brand-mark">✦</span> Remy Scout</div><button className="landing-theme-toggle" type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>{theme === 'light' ? <Moon size={16}/> : <Sun size={16}/>}</button></div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>{titles[mode]}</h1><p className="auth-intro">{mode === 'recovery' ? 'We’ll send a secure reset link if the account exists.' : mode === 'update_password' ? 'Use a new password for your account.' : 'Sign in to your Remy Scout workspace.'}</p>
     <form onSubmit={submit}>
       {mode !== 'update_password' && <label>Email address<div className="auth-input"><Mail size={16}/><input type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"/></div></label>}
       {mode !== 'recovery' && <label>Password<div className="auth-input"><LockKeyhole size={16}/><input type={showPassword ? 'text' : 'password'} required minLength={8} autoComplete={mode === 'sign_in' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters"/><button className="password-visibility" type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>}

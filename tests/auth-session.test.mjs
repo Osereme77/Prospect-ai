@@ -18,6 +18,11 @@ test('treats a rejected session lookup as recoverable', async () => {
   assert.deepEqual(result, { kind: 'unavailable' })
 })
 
+test('falls back when session restoration never responds', async () => {
+  const result = await restoreInitialSession(() => new Promise(() => {}), () => false, 5)
+  assert.deepEqual(result, { kind: 'unavailable' })
+})
+
 test('keeps an auth event result when session restoration finishes later', async () => {
   let authEventReceived = false
   let finishLookup

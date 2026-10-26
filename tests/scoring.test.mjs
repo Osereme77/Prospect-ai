@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { calculateScore, scoreLead } from '../src/lib/scoring.ts'
+import { calculateScore, scoreLead, scoreLeadForQuery } from '../src/lib/scoring.ts'
 import { canonicalPublicUrl } from '../src/lib/urls.ts'
 import { leadsToCsv } from '../src/lib/export.ts'
 import { filterLeads } from '../src/lib/filters.ts'
@@ -55,6 +55,14 @@ test('unknown budget is neutral and the rationale labels uncertain evidence', ()
   assert.equal(result.score, calculateScore(result.breakdown))
   assert.match(result.explanation, /budget unknown/)
   assert.match(result.explanation, /unverified/)
+})
+
+test('query-led discovery scores occupation terms without unrelated profile skills', () => {
+  const storekeeper = scoreLeadForQuery('Storekeeper role managing inventory in Lagos', 'Storekeeper jobs in Lagos', true, true)
+  const developerProfile = scoreLead('Storekeeper role managing inventory in Lagos', ['React', 'TypeScript'], ['AI automation'], true, true)
+  assert.equal(storekeeper.breakdown.relevance, 100)
+  assert.equal(developerProfile.breakdown.relevance, 0)
+  assert.match(storekeeper.explanation, /Requested-query overlap 2\/2/)
 })
 
 test('public URL canonicalization removes tracking parameters and fragments', () => {

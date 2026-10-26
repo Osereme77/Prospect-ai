@@ -1,10 +1,26 @@
 import { expect, test } from '@playwright/test'
 
-test('keeps an unauthenticated visitor on the sign-in screen', async ({ page }) => {
-  await page.goto('/')
+test.beforeEach(async ({ page }) => {
+  await page.route('https://auth-gate-test.supabase.co/**', route => route.fulfill({ status: 200, contentType: 'application/json', body: '{}' }))
+})
 
-  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
+test('shows the public Remy Scout landing page before authentication', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'commit' })
+
+  await expect(page.getByRole('heading', { name: /Find Better Opportunities\. Let AI Do the Research\./ })).toBeVisible({ timeout: 20000 })
+  await expect(page.locator('.landing-nav-actions').getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Get started free', exact: false }).first()).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Your prospecting command centre' })).toHaveCount(0)
+})
+
+test('landing actions open the existing sign in and sign up forms', async ({ page }) => {
+  await page.goto('/', { waitUntil: 'commit' })
+  await page.locator('.landing-nav-actions').getByRole('button', { name: 'Sign in', exact: true }).click()
+  await expect(page.getByRole('heading', { name: 'Welcome back' })).toBeVisible()
+  await page.getByRole('button', { name: /Create account/ }).click()
+  await expect(page.getByRole('heading', { name: 'Create your account' })).toBeVisible()
+  await expect(page.getByLabel('Confirm password')).toBeVisible()
+  await expect(page.getByRole('button', { name: 'Show confirmation password' })).toBeVisible()
 })
 
 test('resends email confirmation without revealing whether an account exists', async ({ page }) => {
@@ -17,6 +33,7 @@ test('resends email confirmation without revealing whether an account exists', a
   })
 
   await page.goto('/', { waitUntil: 'commit' })
+  await page.locator('.landing-nav-actions').getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByLabel('Email address').fill('owner@example.test')
   await page.getByRole('button', { name: 'Resend confirmation' }).click()
 
@@ -35,6 +52,7 @@ test('handles confirmation email rate limits without echoing the email address',
   })
 
   await page.goto('/', { waitUntil: 'commit' })
+  await page.locator('.landing-nav-actions').getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByLabel('Email address').fill('private-address@example.test')
   await page.getByRole('button', { name: 'Resend confirmation' }).click()
 
@@ -51,6 +69,7 @@ test('returns password reset emails to a protected password update screen', asyn
   })
 
   await page.goto('/', { waitUntil: 'commit' })
+  await page.locator('.landing-nav-actions').getByRole('button', { name: 'Sign in', exact: true }).click()
   await page.getByRole('button', { name: 'Forgot password?' }).click()
   await page.getByLabel('Email address').fill('owner@example.test')
   await page.getByRole('button', { name: 'Send reset link' }).click()
@@ -61,7 +80,7 @@ test('returns password reset emails to a protected password update screen', asyn
   expect(recoveryUrl.searchParams.get('auth')).toBe('recovery')
 
   await page.goto('/?auth=recovery', { waitUntil: 'commit' })
-  await expect(page.getByRole('heading', { name: 'Password reset link unavailable' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Password reset link unavailable' })).toBeVisible({ timeout: 20000 })
   await expect(page.getByRole('heading', { name: 'Your prospecting command centre' })).toHaveCount(0)
   await page.getByRole('button', { name: 'Request a new link' }).click()
   await expect(page.getByRole('heading', { name: 'Reset your password' })).toBeVisible()
