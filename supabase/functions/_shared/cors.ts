@@ -1,5 +1,11 @@
 const allowedMethods = 'POST, OPTIONS'
 const allowedHeaders = 'authorization, x-client-info, apikey, content-type, idempotency-key'
+// Exact origins for the deployed app. Keep this list explicit; never allow
+// arbitrary Netlify subdomains or reflect an untrusted Origin header.
+const deployedOrigins = [
+  'https://jobsremyai.netlify.app',
+  'https://ui-test--jobsremyai.netlify.app',
+]
 
 function normalizeOrigin(value: string): string | null {
   try {
@@ -12,7 +18,7 @@ function normalizeOrigin(value: string): string | null {
 }
 
 export function discoveryCorsHeaders(origin: string | null, configuredOrigins: string | null | undefined, legacyOrigin: string | null | undefined): Record<string, string> {
-  const allowed = new Set([configuredOrigins ?? '', legacyOrigin ?? '']
+  const allowed = new Set([...deployedOrigins, configuredOrigins ?? '', legacyOrigin ?? '']
     .flatMap(value => value.split(','))
     .map(value => value.trim())
     .map(normalizeOrigin)

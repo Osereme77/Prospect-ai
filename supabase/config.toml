@@ -9,3 +9,6 @@ verify_jwt = true
 
 [functions.scheduled-discovery]
 verify_jwt = true
+
+[functions.admin-user-management]
+verify_jwt = true

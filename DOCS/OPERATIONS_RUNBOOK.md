@@ -4,7 +4,7 @@ This runbook describes the current development implementation. It is not evidenc
 
 ## Development discovery state (2026-10-23)
 
-- The owner's written approval for Remote OK was recorded. The development project's `discover` function is enabled for this free public feed with a 100-request monthly provider cap; the account source is enabled with a matching cap and an audited maintenance record. The function CORS allowlist contains only localhost and `https://ui-test--jobsremyai.netlify.app`; its preview-origin preflight returned HTTP 200. The account-level audit trigger cannot attribute this setup to an authenticated session, so the maintenance audit entry has a null actor.
+- The owner's written approval for Remote OK was recorded. The development project's `discover` function is enabled for this free public feed with a 100-request monthly provider cap; the account source is enabled with a matching cap and an audited maintenance record. The deployed function was last confirmed to allow localhost and `https://ui-test--jobsremyai.netlify.app`; the production origin `https://jobsremyai.netlify.app` was missing. The source now includes both exact Netlify origins, but the function must be deployed before that correction reaches Supabase. The account-level audit trigger cannot attribute maintenance setup to an authenticated session, so its audit entry has a null actor.
 - Remote OK's [feed FAQ](https://remoteok.com/faq) says its feeds are free and asks aggregators to credit Remote OK and link each original post. The app displays the attribution and preserves the original post URL.
 - This configuration does not prove discovery works end to end. Hosted sign-in has failed, so an authenticated on-demand run has not been verified. Do not claim results until a real run appears in **Recent search runs**.
 - Scheduled discovery remains off. There is no scheduler secret or private scheduler, and the account-level scheduled opt-in is false. Do not enable cron as part of this provider approval.
@@ -19,6 +19,8 @@ This runbook describes the current development implementation. It is not evidenc
 ## Triage a discovery run
 
 Open **Admin → Recent search runs** and inspect the status and bounded error summary. Current Edge Function responses use these codes:
+
+If the browser reports a generic network failure before a run appears, first check the exact app origin in the Edge Function CORS allowlist. The production and preview Netlify origins are explicitly listed in `supabase/functions/_shared/cors.ts`. Deploy the updated functions separately with `supabase functions deploy discover --project-ref pugvqkytxutnfucisurl` and `supabase functions deploy admin-user-management --project-ref pugvqkytxutnfucisurl`. Do not use a wildcard origin.
 
 | Code | Meaning | Recovery |
 |---|---|---|

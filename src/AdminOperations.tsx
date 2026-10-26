@@ -8,8 +8,9 @@ import {
   type AdminOperationsData,
 } from './lib/repository'
 import { getQueueHealthAlerts, getWorkerHealthAlerts } from './lib/operations'
+import AdminUsers from './AdminUsers'
 
-export default function AdminOperations({ user, notify }: { user: User; notify: (message: string) => void }) {
+export default function AdminOperations({ user, notify, isSuperAdmin }: { user: User; notify: (message: string) => void; isSuperAdmin: boolean }) {
   const [data, setData] = useState<AdminOperationsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -73,6 +74,7 @@ export default function AdminOperations({ user, notify }: { user: User; notify: 
     <small className="eyebrow">PRIVILEGED WORKSPACE</small>
     <h1>Operations</h1>
     <p className="subtitle">Review discovery usage, sources, runs, email delivery, and audit events.</p>
+    {isSuperAdmin && <AdminUsers user={user} notify={notify} />}
     <button className="secondary admin-refresh" onClick={() => setRefresh(value => value + 1)}><RefreshCw size={15} /> Refresh operational data</button>
     <div className="stats admin-stats">
       {stats.map(([label, value]) => <div className="stat" key={label}><span>{label}</span><Activity size={17} /><b>{value}</b><small>{label.includes('this month') || label.includes('active this month') ? 'Current calendar month' : label.includes('email') ? 'Across the full queue' : 'Latest 50 records where applicable'}</small></div>)}
