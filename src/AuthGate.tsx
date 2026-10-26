@@ -5,6 +5,7 @@ import { ArrowLeft, Eye, EyeOff, LoaderCircle, LockKeyhole, Mail, Moon, ShieldCh
 import { supabase, supabaseConfigured, supabaseConfigError } from './lib/supabase'
 import { restoreInitialSession } from './lib/authSession'
 import LandingPage from './LandingPage'
+import BrandMark from './BrandMark'
 
 const App = lazy(() => import('./App'))
 
@@ -125,18 +126,18 @@ export default function AuthGate() {
     } finally { setBusy(false) }
   }
 
-  if (!supabase && mode !== 'landing') return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><span className="brand-mark">✦</span> Remy Scout</div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>Account setup needs attention</h1><p>{supabaseConfigError || 'Check VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.local.'}</p><button className="auth-back" onClick={() => setMode('landing')}><ArrowLeft size={14}/> Back to Remy Scout</button></section></main>
+  if (!supabase && mode !== 'landing') return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><BrandMark/> Remy Scout</div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>Account setup needs attention</h1><p>{supabaseConfigError || 'Check VITE_SUPABASE_URL and VITE_SUPABASE_PUBLISHABLE_KEY in .env.local.'}</p><button className="auth-back" onClick={() => setMode('landing')}><ArrowLeft size={14}/> Back to Remy Scout</button></section></main>
   if (!ready) return <div className="auth-loading"><LoaderCircle className="spin"/> Checking your secure session…</div>
   if (session?.user && mode !== 'update_password') return <Suspense fallback={<div className="auth-loading" role="status">Loading Remy Scout…</div>}><App user={session.user} onSignOut={async () => { await supabase?.auth.signOut() }} theme={theme} onToggleTheme={toggleTheme}/></Suspense>
 
   const titles: Record<Mode, string> = { landing: 'Welcome to Remy Scout', sign_in: 'Welcome back', sign_up: 'Create your account', recovery: 'Reset your password', update_password: 'Choose a new password' }
-  if (mode === 'update_password' && (!session?.user || !recoveryVerified)) return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><span className="brand-mark">✦</span> Remy Scout</div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>Password reset link unavailable</h1><p className="auth-intro">This link may have expired or already been used. Request a new password reset link to continue.</p><button className="primary auth-submit" onClick={() => { clearPasswordRecoveryMarker(); setMode('recovery'); setError(''); setMessage('') }}>Request a new link</button><div className="auth-links"><button type="button" onClick={() => { clearPasswordRecoveryMarker(); setError(''); setMessage(''); setMode('sign_in') }}><ArrowLeft size={14}/> Back to sign in</button></div></section></main>
+  if (mode === 'update_password' && (!session?.user || !recoveryVerified)) return <main className="auth-screen"><section className="auth-card"><div className="auth-brand"><BrandMark/> Remy Scout</div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>Password reset link unavailable</h1><p className="auth-intro">This link may have expired or already been used. Request a new password reset link to continue.</p><button className="primary auth-submit" onClick={() => { clearPasswordRecoveryMarker(); setMode('recovery'); setError(''); setMessage('') }}>Request a new link</button><div className="auth-links"><button type="button" onClick={() => { clearPasswordRecoveryMarker(); setError(''); setMessage(''); setMode('sign_in') }}><ArrowLeft size={14}/> Back to sign in</button></div></section></main>
   if (mode === 'landing') return <LandingPage theme={theme} onToggleTheme={toggleTheme} onSignIn={() => { setError(''); setMessage(''); setMode('sign_in') }} onSignUp={() => { setError(''); setMessage(''); setMode('sign_up') }} />
   const isSignUp = mode === 'sign_up'
   return <main className={`auth-screen${isSignUp ? ' auth-screen-signup' : ''}`}>
     {isSignUp && <div className="auth-signup-layout">
       <aside className="auth-signup-promo">
-        <div className="auth-promo-brand"><span className="brand-mark">✦</span> Remy Scout</div>
+        <div className="auth-promo-brand"><BrandMark/><span>Remy Scout</span></div>
         <div className="auth-promo-copy">
           <span className="auth-promo-kicker">A more focused job search</span>
           <h2>Make your next opportunity easier to find.</h2>
@@ -162,7 +163,7 @@ export default function AuthGate() {
         <div className="auth-security"><ShieldCheck size={15}/> Your account is protected by Supabase Auth and database row-level security.</div>
       </section>
     </div>}
-    {!isSignUp && <section className="auth-card"><div className="auth-screen-topline"><div className="auth-brand"><span className="brand-mark">✦</span> Remy Scout</div><button className="landing-theme-toggle" type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>{theme === 'light' ? <Moon size={16}/> : <Sun size={16}/>}</button></div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>{titles[mode]}</h1><p className="auth-intro">{mode === 'recovery' ? 'We’ll send a secure reset link if the account exists.' : mode === 'update_password' ? 'Use a new password for your account.' : 'Sign in to your Remy Scout workspace.'}</p>
+    {!isSignUp && <section className="auth-card"><div className="auth-screen-topline"><div className="auth-brand"><BrandMark/> Remy Scout</div><button className="landing-theme-toggle" type="button" onClick={toggleTheme} aria-label={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}>{theme === 'light' ? <Moon size={16}/> : <Sun size={16}/>}</button></div><div className="auth-icon"><LockKeyhole size={20}/></div><h1>{titles[mode]}</h1><p className="auth-intro">{mode === 'recovery' ? 'We’ll send a secure reset link if the account exists.' : mode === 'update_password' ? 'Use a new password for your account.' : 'Sign in to your Remy Scout workspace.'}</p>
     <form onSubmit={submit}>
       {mode !== 'update_password' && <label>Email address<div className="auth-input"><Mail size={16}/><input type="email" autoComplete="email" required value={email} onChange={e => setEmail(e.target.value)} placeholder="you@example.com"/></div></label>}
       {mode !== 'recovery' && <label>Password<div className="auth-input"><LockKeyhole size={16}/><input type={showPassword ? 'text' : 'password'} required minLength={8} autoComplete={mode === 'sign_in' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="At least 8 characters"/><button className="password-visibility" type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? 'Hide password' : 'Show password'} aria-pressed={showPassword}>{showPassword ? <EyeOff size={16}/> : <Eye size={16}/>}</button></div></label>}

@@ -8,6 +8,8 @@ test('shows the public Remy Scout landing page before authentication', async ({ 
   await page.goto('/', { waitUntil: 'commit' })
 
   await expect(page.getByRole('heading', { name: /Find Better Opportunities\. Let AI Do the Research\./ })).toBeVisible({ timeout: 20000 })
+  await expect(page.locator('.landing-nav .landing-brand svg')).toHaveCount(1)
+  await expect(page.locator('.landing-feature-grid article')).toHaveCount(6)
   await expect(page.locator('.landing-nav-actions').getByRole('button', { name: 'Sign in', exact: true })).toBeVisible()
   await expect(page.getByRole('button', { name: 'Get started free', exact: false }).first()).toBeVisible()
   await expect(page.getByRole('heading', { name: 'Your prospecting command centre' })).toHaveCount(0)

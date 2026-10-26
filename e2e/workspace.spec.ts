@@ -31,7 +31,7 @@ async function signInWithMockWorkspace(page: Page) {
   await page.getByLabel('Email address').fill('owner@example.test')
   await page.locator('input[autocomplete="current-password"]').fill('valid-test-password')
   await page.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await expect(page.getByRole('heading', { name: 'Your opportunity command centre' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your opportunity command centre' })).toBeVisible({ timeout: 20000 })
 }
 
 test('authenticated visitor reaches the dashboard and can create, retrieve, and delete a lead', async ({ page }) => {
@@ -51,7 +51,7 @@ test('authenticated visitor reaches the dashboard and can create, retrieve, and 
   await expect(page.getByText(title, { exact: true }).first()).toBeVisible()
 
   await page.reload()
-  await expect(page.getByRole('heading', { name: 'Your opportunity command centre' })).toBeVisible()
+  await expect(page.getByRole('heading', { name: 'Your opportunity command centre' })).toBeVisible({ timeout: 20000 })
   await expect(page.getByText(title, { exact: true }).first()).toBeVisible()
   await page.getByRole('button', { name: /Opportunities/ }).click()
   await expect(page.getByRole('button', { name: new RegExp(title) })).toBeVisible()
